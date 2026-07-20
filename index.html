@@ -10,151 +10,104 @@
     
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: 'Arial Rounded MT Bold', Arial, sans-serif; background: #87CEEB; }
+        #welcome-screen { position: absolute; width: 100%; height: 100%; background: linear-gradient(to bottom, #a1c4fd 0%, #c2e9fb 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; transition: opacity 0.8s ease; }
         
-        /* Loading & Welcome Screen Background */
-        #welcome-screen {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(to bottom, #a1c4fd 0%, #c2e9fb 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-            transition: opacity 0.8s ease;
-        }
-
-        /* Moving Clouds Animation */
-        .cloud {
-            position: absolute;
-            background: white;
-            border-radius: 100px;
-            opacity: 0.8;
-            pointer-events: none;
-        }
-        .cloud::before, .cloud::after {
-            content: ''; position: absolute; background: white; border-radius: 50%;
-        }
+        /* Moving Clouds & Floating Hearts Animations */
+        .cloud { position: absolute; background: white; border-radius: 100px; opacity: 0.8; pointer-events: none; }
+        .cloud::before, .cloud::after { content: ''; position: absolute; background: white; border-radius: 50%; }
         .cloud.c1 { width: 150px; height: 50px; top: 15%; left: -160px; animation: moveCloud 25s linear infinite; }
         .cloud.c1::before { width: 70px; height: 70px; top: -35px; left: 20px; }
         .cloud.c1::after { width: 50px; height: 50px; top: -25px; left: 75px; }
-        
         .cloud.c2 { width: 100px; height: 35px; top: 30%; left: -110px; animation: moveCloud 18s linear infinite; animation-delay: 5s; }
         .cloud.c2::before { width: 45px; height: 45px; top: -20px; left: 15px; }
         .cloud.c2::after { width: 35px; height: 35px; top: -15px; left: 50px; }
+        @keyframes moveCloud { 0% { left: -160px; } 100% { left: 100%; } }
+        .heart { position: absolute; color: rgba(231, 76, 60, 0.4); font-size: 24px; bottom: -50px; animation: floatHeart 8s linear infinite; pointer-events: none; }
+        @keyframes floatHeart { 0% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; } 100% { transform: translateY(-105vh) scale(1.5) rotate(360deg); opacity: 0; } }
 
-        @keyframes moveCloud {
-            0% { left: -160px; }
-            100% { left: 100%; }
-        }
+        .menu-box { text-align: center; background: rgba(255, 255, 255, 0.9); padding: 30px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); backdrop-filter: blur(5px); border: 3px solid #fff; max-width: 380px; width: 90%; z-index: 10; max-height: 90vh; overflow-y: auto; }
+        h1 { color: #d35400; margin: 0 0 5px 0; font-size: 28px; }
+        h3 { margin: 10px 0 5px 0; color: #2c3e50; font-size: 16px; }
+        .subtitle { color: #7f8c8d; font-size: 13px; margin-bottom: 15px; font-style: italic; }
 
-        /* Floating Hearts */
-        .heart {
-            position: absolute;
-            color: rgba(231, 76, 60, 0.4);
-            font-size: 24px;
-            bottom: -50px;
-            animation: floatHeart 8s linear infinite;
-            pointer-events: none;
-        }
-        @keyframes floatHeart {
-            0% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
-            100% { transform: translateY(-105vh) scale(1.5) rotate(360deg); opacity: 0; }
-        }
-
-        /* Branding Content Box */
-        .menu-box {
-            text-align: center;
-            background: rgba(255, 255, 255, 0.85);
-            padding: 40px;
-            border-radius: 25px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
-            backdrop-filter: blur(5px);
-            border: 3px solid #fff;
-            max-width: 340px;
-            width: 85%;
-            z-index: 10;
-        }
-
-        h1 { color: #d35400; margin: 0 0 5px 0; font-size: 32px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
-        .subtitle { color: #7f8c8d; font-size: 14px; margin-bottom: 25px; font-style: italic; }
-
-        /* Stylish Interactive Buttons */
-        .menu-btn {
-            display: block;
-            width: 100%;
-            padding: 14px;
-            margin: 12px 0;
-            font-size: 18px;
-            font-weight: bold;
-            color: white;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transition: transform 0.2s, background-color 0.2s;
-        }
+        .menu-btn { display: block; width: 100%; padding: 12px; margin: 10px 0; font-size: 16px; font-weight: bold; color: white; border: none; border-radius: 50px; cursor: pointer; transition: transform 0.2s, background-color 0.2s; }
         .menu-btn:active { transform: scale(0.96); }
-        
         #start-btn { background: #e74c3c; }
-        #start-btn:hover { background: #c0392b; }
         #settings-btn { background: #34495e; }
         #music-btn { background: #2ecc71; }
         #how-to-btn { background: #f1c40f; color: #34495e; }
 
-        /* Setup / Lobby Overlay Form */
-        #lobby-ui {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        input {
-            width: 90%; padding: 12px; margin: 8px 0; font-size: 16px;
-            border-radius: 10px; border: 2px solid #bdc3c7; text-align: center;
-        }
-        input:focus { border-color: #e74c3c; outline: none; }
+        /* Character Selection Grid */
+        .char-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 15px; }
+        .char-card { background: #f8f9fa; border: 2px solid #bdc3c7; border-radius: 10px; padding: 6px; cursor: pointer; font-size: 22px; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; }
+        .char-card span { font-size: 10px; font-weight: bold; color: #7f8c8d; margin-top: 4px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; width: 100%; }
+        .char-card:hover { transform: scale(1.05); }
+        .char-card.selected { border-color: #e74c3c; background: #ffeef0; transform: scale(1.1); }
 
+        input { width: 90%; padding: 10px; margin: 6px 0; font-size: 15px; border-radius: 10px; border: 2px solid #bdc3c7; text-align: center; }
+        input:focus { border-color: #e74c3c; outline: none; }
         #game-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
-        .hidden { display: none !important; opacity: 0; pointer-events: none; }
+        .hidden { display: none !important; }
+        
+        /* Connection Screen Animation */
+        .loading-heart { font-size: 50px; animation: pulse 1s infinite alternate; margin: 20px 0; color: #e74c3c; }
+        @keyframes pulse { 0% { transform: scale(0.8); } 100% { transform: scale(1.2); } }
     </style>
 </head>
 <body>
 
-    <!-- Animated Welcome / Menu Screen Layout -->
     <div id="welcome-screen">
-        <!-- Clouds background element -->
         <div class="cloud c1"></div>
         <div class="cloud c2"></div>
-        
-        <!-- Automated Generator via Body for Floating Hearts -->
-        <div class="heart" style="left: 10%; animation-delay: 0s;">❤️</div>
-        <div class="heart" style="left: 30%; animation-delay: 3s;">❤️</div>
-        <div class="heart" style="left: 65%; animation-delay: 1.5s;">❤️</div>
-        <div class="heart" style="left: 85%; animation-delay: 4.5s;">❤️</div>
+        <div class="heart" style="left: 10%;">❤️</div>
+        <div class="heart" style="left: 40%;">❤️</div>
+        <div class="heart" style="left: 75%;">❤️</div>
 
-        <!-- Main Menu Panel Box -->
+        <!-- MAIN MENU PANEL -->
         <div class="menu-box" id="main-menu-panel">
             <h1>Together Quest ❤️</h1>
             <div class="subtitle">Made with love for two special players.</div>
-            
             <button class="menu-btn" id="start-btn">▶ Start Game</button>
             <button class="menu-btn" id="settings-btn">⚙ Settings</button>
             <button class="menu-btn" id="music-btn">🎵 Music: ON</button>
             <button class="menu-btn" id="how-to-btn">❓ How to Play</button>
         </div>
 
-        <!-- Setup Form Container (Hidden initially until Start Clicked) -->
+        <!-- PLAYER SETUP PANEL -->
         <div class="menu-box hidden" id="setup-panel">
             <h1>Player Setup ✨</h1>
-            <div class="subtitle">Enter info to generate network room</div>
+            <div class="subtitle">Apna character aur room select karein</div>
             
-            <div id="lobby-ui">
-                <input type="text" id="playerName" placeholder="Apna Name" maxlength="10">
-                <input type="text" id="roomCode" placeholder="6-Digit Room Code" maxlength="6">
-                <button class="menu-btn" id="start-btn" style="background:#e74c3c; width:100%;" id="connect-action-btn">Connect & Play ❤️</button>
-                <button class="menu-btn" id="settings-btn" style="background:#7f8c8d; font-size:14px; padding:8px;" id="back-menu-btn">← Back</button>
+            <input type="text" id="playerName" placeholder="Apna Name" maxlength="10">
+            <input type="text" id="roomCode" placeholder="6-Digit Room Code" maxlength="6">
+
+            <h3>Boy Characters</h3>
+            <div class="char-grid" id="boy-grid">
+                <div class="char-card selected" data-emoji="👦" data-label="Casual">👦<span>Casual</span></div>
+                <div class="char-card" data-emoji="🧑‍🎤" data-label="Hoodie">🧑‍🎤<span>Hoodie</span></div>
+                <div class="char-card" data-emoji="🤠" data-label="Adventurer">🤠<span>Adventure</span></div>
+                <div class="char-card" data-emoji="🛡️" data-label="Knight">🛡️<span>Knight</span></div>
+                <div class="char-card" data-emoji="👨‍🚀" data-label="Astronaut">👨‍🚀<span>Astronut</span></div>
             </div>
+
+            <h3>Girl Characters</h3>
+            <div class="char-grid" id="girl-grid">
+                <div class="char-card" data-emoji="👧" data-label="Casual">👧<span>Casual</span></div>
+                <div class="char-card" data-emoji="👸" data-label="Princess">👸<span>Princess</span></div>
+                <div class="char-card" data-emoji="👩‍🌾" data-label="Explorer">👩‍🌾<span>Explorer</span></div>
+                <div class="char-card" data-emoji="🧚‍♀️" data-label="Fairy">🧚‍♀️<span>Fairy</span></div>
+                <div class="char-card" data-emoji="👩‍🎤" data-label="Hoodie">👩‍🎤<span>Hoodie</span></div>
+            </div>
+
+            <button class="menu-btn" id="connect-action-btn" style="background:#e74c3c;">Ready & Connect ❤️</button>
+            <button class="menu-btn" id="back-menu-btn" style="background:#7f8c8d; font-size:14px; padding:6px;">← Back</button>
+        </div>
+
+        <!-- CONNECTION SCREEN PANEL -->
+        <div class="menu-box hidden" id="connection-panel">
+            <h1>Connecting...</h1>
+            <div class="loading-heart">❤️</div>
+            <p id="connection-status">Connecting to Room Server...</p>
         </div>
     </div>
 
@@ -163,10 +116,10 @@
     <script src="game.js"></script>
     
     <script>
-        // Welcome View Operations Controls
         const mainPanel = document.getElementById('main-menu-panel');
         const setupPanel = document.getElementById('setup-panel');
-        
+        let selectedEmoji = "👦"; // Default Selection
+
         document.getElementById('start-btn').addEventListener('click', () => {
             mainPanel.classList.add('hidden');
             setupPanel.classList.remove('hidden');
@@ -177,15 +130,18 @@
             mainPanel.classList.remove('hidden');
         });
 
-        // Simple Alert toggles for secondary operational buttons placeholder
-        document.getElementById('settings-btn').addEventListener('click', () => alert("Settings: Screen scale standard optimized automatically!"));
-        document.getElementById('how-to-btn').addEventListener('click', () => alert("How To Play: PC par Arrow Keys use karein ya Mobile Screen par click karke automatic move karein. Teamwork is key! 🔑"));
-        
-        let musicState = true;
-        document.getElementById('music-btn').addEventListener('click', () => {
-            musicState = !musicState;
-            document.getElementById('music-btn').innerText = `🎵 Music: ${musicState ? 'ON' : 'OFF'}`;
+        // Grid Click Selection Handling Logic
+        const cards = document.querySelectorAll('.char-card');
+        cards.forEach(card => {
+            card.addEventListener('click', () => {
+                cards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedEmoji = card.getAttribute('data-emoji');
+            });
         });
+
+        document.getElementById('settings-btn').addEventListener('click', () => alert("Settings: Automatic optimization loaded!"));
+        document.getElementById('how-to-btn').addEventListener('click', () => alert("Teamwork is Key! Ek player plate par khrha hoga to dusre ka rasta khulega. Mil kar khelna hai!"));
     </script>
 </body>
 </html>

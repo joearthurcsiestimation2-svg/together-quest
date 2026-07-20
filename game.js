@@ -17,24 +17,23 @@ let playerSprites = {};
 let currentRoom = "";
 let myName = "";
 
-// Dynamic integration using global selector logic safely
-document.addEventListener('click', function(e) {
-    if(e.target && e.target.textContent === "Connect & Play ❤️") {
-        const nameInput = document.getElementById('playerName').value.trim();
-        const roomInput = document.getElementById('roomCode').value.trim();
+document.getElementById('connect-action-btn').addEventListener('click', () => {
+    const nameInput = document.getElementById('playerName').value.trim();
+    const roomInput = document.getElementById('roomCode').value.trim();
 
-        if(!nameInput || !roomInput) {
-            alert("Naam aur Room Code dono enter karein!");
-            return;
-        }
-
-        myName = nameInput;
-        currentRoom = roomInput;
-        
-        // Hide the complete Welcome Layer smoothly to reveal active map
-        document.getElementById('welcome-screen').classList.add('hidden');
-        startMultiplayer();
+    if(!nameInput || !roomInput) {
+        alert("Naam aur Room Code dono enter karein!");
+        return;
     }
+
+    myName = nameInput;
+    currentRoom = roomInput;
+    
+    // Switch to Connection animation screen
+    document.getElementById('setup-panel').classList.add('hidden');
+    document.getElementById('connection-panel').classList.remove('hidden');
+    
+    startMultiplayer();
 });
 
 function startMultiplayer() {
@@ -42,15 +41,27 @@ function startMultiplayer() {
     roomRef = database.ref(`rooms/${currentRoom}`);
     playerRef = database.ref(`rooms/${currentRoom}/players/${playerId}`);
 
+    // Read global variable from script overlay safely
+    let chosenEmoji = window.selectedEmoji || "👦";
+
     playerRef.set({
         id: playerId,
         name: myName,
+        character: chosenEmoji,
         x: 400,
-        y: 300,
-        color: Math.random() * 0xffffff
+        y: 300
     });
 
     playerRef.onDisconnect().remove();
+
+    // Trigger Connection Status animation screen update
+    setTimeout(() => {
+        document.getElementById('connection-status').innerText = "Connection Successful ❤️";
+        setTimeout(() => {
+            document.getElementById('welcome-screen').classList.add('hidden');
+            initGameEngine();
+        }, 1200);
+    }, 1500);
 
     roomRef.child('players').on('value', (snapshot) => {
         players = snapshot.val() || {};
@@ -63,8 +74,6 @@ function startMultiplayer() {
             delete playerSprites[id];
         }
     });
-
-    initGameEngine();
 }
 
 function initGameEngine() {
@@ -100,9 +109,11 @@ function update() {
         const playerData = players[id];
 
         if (!playerSprites[id]) {
-            const circle = this.add.circle(0, 0, 20, playerData.color);
-            const nameTag = this.add.text(0, -35, playerData.name, { fontSize: '14px', fill: '#ffffff' }).setOrigin(0.5);
-            playerSprites[id] = this.add.container(playerData.x, playerData.y, [circle, nameTag]);
+            // Draw character emoji inside text graphic format directly inside canvas
+            const charText = this.add.text(0, 0, playerData.character || "👦", { fontSize: '38px' }).setOrigin(0.5);
+            const nameTag = this.add.text(0, -35, playerData.name, { fontSize: '14px', fill: '#ffffff', backgroundColor: '#000000a0', padding: {x:4, y:2} }).setOrigin(0.5);
+            
+            playerSprites[id] = this.add.container(playerData.x, playerData.y, [charText, nameTag]);
             this.physics.add.existing(playerSprites[id]);
         } else {
             playerSprites[id].x = playerData.x;
