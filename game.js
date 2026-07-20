@@ -11,185 +11,208 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-let playerId, playerRef, roomRef;
+let playerId, myName, currentRoom, roomRef, playerRef;
 let players = {};
-let playerSprites = {};
-let currentRoom = "";
-let myName = "";
-let selectedCharacter = "Casual Boy"; 
-let activeWorldTheme = "#2c3e50"; // Default background color
-let phaserGameInstance = null;
-let storyStep = 0;
+let activeGame = "hub";
 
-// --- UI NAVIGATION LOGIC ---
-document.getElementById('startBtn').addEventListener('click', () => {
-    document.getElementById('welcome-screen').classList.add('hidden');
-    document.getElementById('setup-screen').classList.remove('hidden');
-});
-
-function selectChar(charName) {
-    selectedCharacter = charName;
-    document.querySelectorAll('.char-option').forEach(el => el.classList.remove('selected'));
-    event.target.classList.add('selected');
-}
-
-document.getElementById('readyBtn').addEventListener('click', () => {
-    const nameInput = document.getElementById('playerName').value.trim();
-    if (!nameInput) {
-        alert("Pehle apna naam likhein! 🥰");
-        return;
-    }
-    myName = nameInput;
-    document.getElementById('setup-screen').classList.add('hidden');
-    document.getElementById('room-screen').classList.remove('hidden');
-});
-
+// UI Trigger Events
 document.getElementById('joinBtn').addEventListener('click', () => {
-    const roomInput = document.getElementById('roomCode').value.trim();
-    if (!roomInput) {
-        alert("Room Code enter karein!");
+    myName = document.getElementById('playerName').value.trim();
+    currentRoom = document.getElementById('roomCode').value.trim();
+
+    if (!myName || !currentRoom) {
+        alert("Naam aur Room Code enter karein! ❤️");
         return;
     }
-    currentRoom = roomInput;
-    document.getElementById('room-screen').classList.add('hidden');
+
+    playerId = 'p_' + Math.random().toString(36).substr(2, 5);
+    document.getElementById('lobby-screen').classList.add('hidden');
+    document.getElementById('hub-screen').classList.remove('hidden');
+    document.getElementById('welcome-msg').innerText = `Hello ${myName}! ❤️`;
     
-    // Trigger Chapter 4 Story Cutscene first!
-    document.getElementById('story-overlay').classList.remove('hidden');
+    initMultiplayerArcade();
 });
 
-// Chapter 4 Dialogue Sequencing Logic
-document.getElementById('storyNextBtn').addEventListener('click', () => {
-    storyStep++;
-    const textElement = document.getElementById('story-text');
-    
-    if (storyStep === 1) {
-        textElement.innerHTML = "Sirf teamwork aur sachi mohabbat se hi tum dono mil sakte ho! 🧩🤝";
-    } else if (storyStep === 2) {
-        // Close Story and launch Map Choice View
-        document.getElementById('story-overlay').classList.add('hidden');
-        document.getElementById('world-map-overlay').classList.remove('hidden');
-    }
-});
+function initMultiplayerArcade() {
+    roomRef = database.ref('arcadeRooms/' + currentRoom);
+    playerRef = roomRef.child('players').child(playerId);
 
-// World Selection triggers backend sync execution
-function selectWorld(worldName, themeColor) {
-    activeWorldTheme = themeColor;
-    document.getElementById('world-map-overlay').classList.add('hidden');
-    
-    // Connect to Firebase and Launch Game Loop
-    startMultiplayerEngine();
-}
-
-function startMultiplayerEngine() {
-    playerId = 'player_' + Math.random().toString(36).substr(2, 9);
-    roomRef = database.ref('rooms/' + currentRoom);
-    playerRef = database.ref('rooms/' + currentRoom + '/players/' + playerId);
-
-    playerRef.set({
-        id: playerId,
-        name: myName,
-        character: selectedCharacter,
-        x: 400,
-        y: 300,
-        color: Math.random() * 0xffffff
-    });
-
+    playerRef.set({ id: playerId, name: myName, score: 0, currentMove: "" });
     playerRef.onDisconnect().remove();
 
+    // Listen for Room Connections
     roomRef.child('players').on('value', (snapshot) => {
         players = snapshot.val() || {};
+        const count = Object.keys(players).length;
+        document.getElementById('hub-status').innerText = count === 2 ? "Dono Players Connected! Khelna Shuru Karein 🥰" : "Waiting for your partner to join...";
+        
+        if(activeGame === 'balloon') updateBalloonScoreboard();
+        if(activeGame === 'rps') checkRPSResult();
     });
 
-    roomRef.child('players').on('child_removed', (snapshot) => {
-        const id = snapshot.key;
-        if (playerSprites[id]) {
-            playerSprites[id].destroy();
-            delete playerSprites[id];
+    // Sync Game Modes instantly across devices
+    roomRef.child('activeScreen').on('value', (snapshot) => {
+        const screen = snapshot.val();
+        if (screen && screen !== activeGame) {
+            showScreenLayout(screen);
         }
     });
 
-    launchPhaserGraphicsView();
+    // Tic Tac Toe Move Listener
+    roomRef.child('ttt/board').on('value', (snapshot) => {
+        if(activeGame === 'ttt') renderTTTBoard(snapshot.val() || Array(9).fill(""));
+    });
+    roomRef.child('ttt/turn').on('value', (snapshot) => {
+        if(activeGame === 'ttt') {
+            const currentTurnId = snapshot.val();
+            document.getElementById('ttt-status').innerText = currentTurnId === playerId ? "Your Turn! ⚡" : "Partner's Turn... 💭";
+        }
+    });
 }
 
-function launchPhaserGraphicsView() {
-    const config = {
-        type: Phaser.AUTO,
-        width: 800,
-        height: 600,
-        parent: 'game-container',
-        scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-        physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
-        scene: { create: gameCreate, update: gameUpdate }
-    };
-    phaserGameInstance = new Phaser.Game(config);
+function switchGame(gameMode) {
+    roomRef.update({ activeScreen: gameMode });
+    if(gameMode === 'ttt') resetTicTacToe();
+    if(gameMode === 'balloon') resetBalloonGame();
 }
 
-let cloudLayer;
+function backToHub() {
+    roomRef.update({ activeScreen: "hub" });
+}
 
-function gameCreate() {
-    // Dynamic theme mapping assigned by World Choice View selection buttons
-    this.cameras.main.setBackgroundColor(activeWorldTheme);
-    
-    // Clouds system setup
-    cloudLayer = this.add.group();
-    for (let i = 0; i < 5; i++) {
-        let cloud = this.add.circle(Phaser.Math.Between(0, 800), Phaser.Math.Between(50, 200), Phaser.Math.Between(30, 60), 0xffffff, 0.4);
-        this.physics.add.existing(cloud);
-        cloudLayer.add(cloud);
+function showScreenLayout(screen) {
+    activeGame = screen;
+    document.getElementById('hub-screen').classList.add('hidden');
+    document.getElementById('game-ttt').classList.add('hidden');
+    document.getElementById('game-rps').classList.add('hidden');
+    document.getElementById('game-balloon').classList.add('hidden');
+
+    if(screen === 'hub') document.getElementById('hub-screen').classList.remove('hidden');
+    if(screen === 'ttt') document.getElementById('game-ttt').classList.remove('hidden');
+    if(screen === 'rps') {
+        document.getElementById('game-rps').classList.remove('hidden');
+        document.getElementById('rps-result').innerText = "";
+        playerRef.update({ currentMove: "" });
     }
+    if(screen === 'balloon') {
+        document.getElementById('game-balloon').classList.remove('hidden');
+        startBalloonSpawner();
+    }
+}
 
-    this.cursors = this.input.keyboard.createCursorKeys();
-    
-    this.add.text(25, 25, "Room: " + currentRoom + " ❤️ Teamwork Active", { 
-        fontSize: '18px', fill: '#ffffff', fontStyle: 'bold'
-    });
-
-    this.input.on('pointerdown', (pointer) => {
-        playerRef.update({ x: pointer.worldX, y: pointer.worldY });
+// ==================== [1] TIC TAC TOE LOGIC ====================
+function resetTicTacToe() {
+    const playerKeys = Object.keys(players);
+    roomRef.child('ttt').set({
+        board: Array(9).fill(""),
+        turn: playerKeys[0] || playerId
     });
 }
 
-function gameUpdate() {
-    // Soft animate clouds loop background view
-    cloudLayer.getChildren().forEach(cloud => {
-        cloud.x += 0.5;
-        if (cloud.x > 850) {
-            cloud.x = -50;
-            cloud.y = Phaser.Math.Between(50, 200);
-        }
+function playTTT(index) {
+    roomRef.child('ttt').once('value', (snapshot) => {
+        const tttData = snapshot.val() || {};
+        if (tttData.turn !== playerId) return; // Check turn
+        
+        let board = tttData.board || Array(9).fill("");
+        if (board[index] !== "") return; // Cell already filled
+
+        const playerKeys = Object.keys(players);
+        const marker = playerKeys[0] === playerId ? "❌" : "⭕";
+        board[index] = marker;
+
+        const nextTurn = playerKeys[0] === playerId ? playerKeys[1] : playerKeys[0];
+        roomRef.child('ttt').update({ board: board, turn: nextTurn });
     });
+}
 
-    if (!playerId || !playerSprites) return;
+function renderTTTBoard(board) {
+    const cells = document.querySelectorAll('.cell');
+    cells.forEach((cell, idx) => {
+        cell.innerText = board[idx] || "";
+    });
+}
 
-    Object.keys(players).forEach((id) => {
-        const data = players[id];
+// ==================== [2] ROCK PAPER SCISSORS LOGIC ====================
+function playRPS(move) {
+    playerRef.update({ currentMove: move });
+    document.getElementById('rps-status').innerText = "Move Locked! Waiting for partner... 🔒";
+}
 
-        if (!playerSprites[id]) {
-            const circle = this.add.circle(0, 0, 22, data.color);
-            const labelStr = data.name + "\n(" + data.character + ")";
-            const nameTag = this.add.text(0, -45, labelStr, { 
-                fontSize: '12px', fill: '#ffffff', fontStyle: 'bold', align: 'center', backgroundColor: '#00000088', padding: 4 
-            }).setOrigin(0.5);
-            
-            playerSprites[id] = this.add.container(data.x, data.y, [circle, nameTag]);
-            this.physics.add.existing(playerSprites[id]);
+function checkRPSResult() {
+    const pKeys = Object.keys(players);
+    if(pKeys.length < 2) return;
+    
+    const p1 = players[pKeys[0]];
+    const p2 = players[pKeys[1]];
+
+    if(p1.currentMove && p2.currentMove) {
+        let resStr = `${p1.name}: ${p1.currentMove} vs ${p2.name}: ${p2.currentMove}<br><br>`;
+        if(p1.currentMove === p2.currentMove) resStr += "It's a Tie! 🤝";
+        else if (
+            (p1.currentMove === '✊' && p2.currentMove === '✌️') ||
+            (p1.currentMove === '✋' && p2.currentMove === '✊') ||
+            (p1.currentMove === '✌️' && p2.currentMove === '✋')
+        ) {
+            resStr += `👑 ${p1.name} Wins! ❤️`;
         } else {
-            playerSprites[id].x = data.x;
-            playerSprites[id].y = data.y;
+            resStr += `👑 ${p2.name} Wins! ❤️`;
         }
-    });
+        document.getElementById('rps-result').innerHTML = resStr;
+        document.getElementById('rps-status').innerText = "Round Finished!";
+    }
+}
 
-    let walkSpeed = 5;
-    let localX = players[playerId]?.x || 400;
-    let localY = players[playerId]?.y || 300;
-    let didMove = false;
+// ==================== [3] BALLOON POP LOGIC ====================
+let spawnInterval;
+function resetBalloonGame() {
+    playerRef.update({ score: 0 });
+}
 
-    if (this.cursors.left.isDown) { localX -= walkSpeed; didMove = true; }
-    if (this.cursors.right.isDown) { localX += walkSpeed; didMove = true; }
-    if (this.cursors.up.isDown) { localY -= walkSpeed; didMove = true; }
-    if (this.cursors.down.isDown) { localY += walkSpeed; didMove = true; }
+function startBalloonSpawner() {
+    const zone = document.getElementById('b-zone');
+    zone.innerHTML = "";
+    clearInterval(spawnInterval);
+    
+    if(Object.keys(players).length < 2) return;
 
-    if (didMove) {
-        playerRef.update({ x: localX, y: localY });
+    spawnInterval = setInterval(() => {
+        if(activeGame !== 'balloon') { clearInterval(spawnInterval); return; }
+        
+        const b = document.createElement('div');
+        b.className = 'balloon';
+        b.style.left = Math.random() * (zone.clientWidth - 60) + "px";
+        b.style.top = "240px";
+        
+        // Random cute color assignment
+        const colors = ['#ff4757', '#74b9ff', '#2ecc71', '#eccc68', '#a55eea'];
+        b.style.background = colors[Math.floor(Math.random() * colors.length)];
+        
+        let currentPos = 240;
+        let flight = setInterval(() => {
+            currentPos -= 2;
+            b.style.top = currentPos + "px";
+            if(currentPos < -60) { clearInterval(flight); b.remove(); }
+        }, 20);
+
+        b.addEventListener('click', () => {
+            clearInterval(flight);
+            b.remove();
+            playerRef.child('score').set((players[playerId]?.score || 0) + 1);
+        });
+
+        zone.appendChild(b);
+    }, 1200);
+}
+
+function updateBalloonScoreboard() {
+    const pKeys = Object.keys(players);
+    if(pKeys.length === 2) {
+        const me = players[playerId];
+        const partnerId = pKeys[0] === playerId ? pKeys[1] : pKeys[0];
+        const partner = players[partnerId];
+        
+        document.getElementById('my-pop-score').innerText = `You: ${me?.score || 0}`;
+        document.getElementById('partner-pop-score').innerText = `${partner?.name || 'Partner'}: ${partner?.score || 0}`;
     }
 }
