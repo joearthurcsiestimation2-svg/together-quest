@@ -17,19 +17,24 @@ let playerSprites = {};
 let currentRoom = "";
 let myName = "";
 
-document.getElementById('joinBtn').addEventListener('click', () => {
-    const nameInput = document.getElementById('playerName').value.trim();
-    const roomInput = document.getElementById('roomCode').value.trim();
+// Dynamic integration using global selector logic safely
+document.addEventListener('click', function(e) {
+    if(e.target && e.target.textContent === "Connect & Play ❤️") {
+        const nameInput = document.getElementById('playerName').value.trim();
+        const roomInput = document.getElementById('roomCode').value.trim();
 
-    if(!nameInput || !roomInput) {
-        alert("Naam aur Room Code dono enter karein!");
-        return;
+        if(!nameInput || !roomInput) {
+            alert("Naam aur Room Code dono enter karein!");
+            return;
+        }
+
+        myName = nameInput;
+        currentRoom = roomInput;
+        
+        // Hide the complete Welcome Layer smoothly to reveal active map
+        document.getElementById('welcome-screen').classList.add('hidden');
+        startMultiplayer();
     }
-
-    myName = nameInput;
-    currentRoom = roomInput;
-    document.getElementById('lobby-ui').classList.add('hidden');
-    startMultiplayer();
 });
 
 function startMultiplayer() {
@@ -68,7 +73,6 @@ function initGameEngine() {
         width: 800,
         height: 600,
         parent: 'game-container',
-        // FIT mode dono device par screen standard 800x600 ke ratios ko exact barabar rakhta hai
         scale: {
             mode: Phaser.Scale.FIT,
             autoCenter: Phaser.Scale.CENTER_BOTH
@@ -80,11 +84,10 @@ function initGameEngine() {
 }
 
 function create() {
-    this.cameras.main.setBackgroundColor('#34495e');
+    this.cameras.main.setBackgroundColor('#2c3e50');
     this.cursors = this.input.keyboard.createCursorKeys();
-    this.add.text(20, 20, `Room: ${currentRoom} ❤️ Connected`, { fontSize: '16px', fill: '#fff' });
+    this.add.text(20, 20, `Room: ${currentRoom} ❤️ Together Quest Map`, { fontSize: '16px', fill: '#fff' });
     
-    // Tapping on mobile calculates the exact visual coordinate inside game framework
     this.input.on('pointerdown', (pointer) => {
         playerRef.update({ x: pointer.worldX, y: pointer.worldY });
     });
@@ -102,7 +105,6 @@ function update() {
             playerSprites[id] = this.add.container(playerData.x, playerData.y, [circle, nameTag]);
             this.physics.add.existing(playerSprites[id]);
         } else {
-            // Direct synchronization for exact position match without lag behind
             playerSprites[id].x = playerData.x;
             playerSprites[id].y = playerData.y;
         }
