@@ -1,4 +1,3 @@
-// --- APNA FIREBASE CONFIG YAHAN SET HAI ---
 const firebaseConfig = {
     apiKey: "AIzaSyDK7KDuxzivTm6SskJkzzsWIe2ATqKg28A",
     authDomain: "togetherquest-9f3b7.firebaseapp.com",
@@ -69,6 +68,11 @@ function initGameEngine() {
         width: 800,
         height: 600,
         parent: 'game-container',
+        // FIT mode dono device par screen standard 800x600 ke ratios ko exact barabar rakhta hai
+        scale: {
+            mode: Phaser.Scale.FIT,
+            autoCenter: Phaser.Scale.CENTER_BOTH
+        },
         physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
         scene: { prepend: {}, create: create, update: update }
     };
@@ -80,9 +84,9 @@ function create() {
     this.cursors = this.input.keyboard.createCursorKeys();
     this.add.text(20, 20, `Room: ${currentRoom} ❤️ Connected`, { fontSize: '16px', fill: '#fff' });
     
-    // Mobile touch controls support
+    // Tapping on mobile calculates the exact visual coordinate inside game framework
     this.input.on('pointerdown', (pointer) => {
-        playerRef.update({ x: pointer.x, y: pointer.y });
+        playerRef.update({ x: pointer.worldX, y: pointer.worldY });
     });
 }
 
@@ -93,17 +97,18 @@ function update() {
         const playerData = players[id];
 
         if (!playerSprites[id]) {
-            const circle = this.add.circle(playerData.x, playerData.y, 20, playerData.color);
-            const nameTag = this.add.text(playerData.x, playerData.y - 35, playerData.name, { fontSize: '14px', fill: '#ffffff' }).setOrigin(0.5);
-            playerSprites[id] = this.add.container(0, 0, [circle, nameTag]);
+            const circle = this.add.circle(0, 0, 20, playerData.color);
+            const nameTag = this.add.text(0, -35, playerData.name, { fontSize: '14px', fill: '#ffffff' }).setOrigin(0.5);
+            playerSprites[id] = this.add.container(playerData.x, playerData.y, [circle, nameTag]);
             this.physics.add.existing(playerSprites[id]);
         } else {
-            playerSprites[id].x = Phaser.Math.Linear(playerSprites[id].x, playerData.x, 0.2);
-            playerSprites[id].y = Phaser.Math.Linear(playerSprites[id].y, playerData.y, 0.2);
+            // Direct synchronization for exact position match without lag behind
+            playerSprites[id].x = playerData.x;
+            playerSprites[id].y = playerData.y;
         }
     });
 
-    let speed = 4;
+    let speed = 5;
     let localX = players[playerId]?.x || 400;
     let localY = players[playerId]?.y || 300;
     let moved = false;
