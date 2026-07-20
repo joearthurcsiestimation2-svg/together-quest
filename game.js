@@ -1,4 +1,3 @@
-// --- FIREBASE SETTINGS CONFIGURATION ---
 const firebaseConfig = {
     apiKey: "AIzaSyDK7KDuxzivTm6SskJkzzsWIe2ATqKg28A",
     authDomain: "togetherquest-9f3b7.firebaseapp.com",
@@ -9,7 +8,6 @@ const firebaseConfig = {
     appId: "1:113517858109:web:f59b1787dbf7bce85e8954"
 };
 
-// Global Systems Initialization
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
@@ -18,52 +16,90 @@ let players = {};
 let playerSprites = {};
 let currentRoom = "";
 let myName = "";
+let selectedCharacter = "Casual Boy"; 
+let activeWorldTheme = "#2c3e50"; // Default background color
+let phaserGameInstance = null;
+let storyStep = 0;
 
-// UI Connections Logic
-document.getElementById('joinBtn').addEventListener('click', () => {
-    const nameInput = document.getElementById('playerName').value.trim();
-    const roomInput = document.getElementById('roomCode').value.trim();
-
-    if (!nameInput || !roomInput) {
-        alert("Naam aur Room Code dono daalna zaroori hai! ❤️");
-        return;
-    }
-
-    myName = nameInput;
-    currentRoom = roomInput;
-    
-    // Hide UI Overlay window
-    document.getElementById('lobby-ui').classList.add('hidden');
-    
-    // Connect to Cloud Database Network
-    startMultiplayerEngine();
+// --- UI NAVIGATION LOGIC ---
+document.getElementById('startBtn').addEventListener('click', () => {
+    document.getElementById('welcome-screen').classList.add('hidden');
+    document.getElementById('setup-screen').classList.remove('hidden');
 });
 
-function startMultiplayerEngine() {
-    // Generate Unique Device Key ID
-    playerId = 'player_' + Math.random().toString(36).substr(2, 9);
+function selectChar(charName) {
+    selectedCharacter = charName;
+    document.querySelectorAll('.char-option').forEach(el => el.classList.remove('selected'));
+    event.target.classList.add('selected');
+}
+
+document.getElementById('readyBtn').addEventListener('click', () => {
+    const nameInput = document.getElementById('playerName').value.trim();
+    if (!nameInput) {
+        alert("Pehle apna naam likhein! 🥰");
+        return;
+    }
+    myName = nameInput;
+    document.getElementById('setup-screen').classList.add('hidden');
+    document.getElementById('room-screen').classList.remove('hidden');
+});
+
+document.getElementById('joinBtn').addEventListener('click', () => {
+    const roomInput = document.getElementById('roomCode').value.trim();
+    if (!roomInput) {
+        alert("Room Code enter karein!");
+        return;
+    }
+    currentRoom = roomInput;
+    document.getElementById('room-screen').classList.add('hidden');
     
+    // Trigger Chapter 4 Story Cutscene first!
+    document.getElementById('story-overlay').classList.remove('hidden');
+});
+
+// Chapter 4 Dialogue Sequencing Logic
+document.getElementById('storyNextBtn').addEventListener('click', () => {
+    storyStep++;
+    const textElement = document.getElementById('story-text');
+    
+    if (storyStep === 1) {
+        textElement.innerHTML = "Sirf teamwork aur sachi mohabbat se hi tum dono mil sakte ho! 🧩🤝";
+    } else if (storyStep === 2) {
+        // Close Story and launch Map Choice View
+        document.getElementById('story-overlay').classList.add('hidden');
+        document.getElementById('world-map-overlay').classList.remove('hidden');
+    }
+});
+
+// World Selection triggers backend sync execution
+function selectWorld(worldName, themeColor) {
+    activeWorldTheme = themeColor;
+    document.getElementById('world-map-overlay').classList.add('hidden');
+    
+    // Connect to Firebase and Launch Game Loop
+    startMultiplayerEngine();
+}
+
+function startMultiplayerEngine() {
+    playerId = 'player_' + Math.random().toString(36).substr(2, 9);
     roomRef = database.ref('rooms/' + currentRoom);
     playerRef = database.ref('rooms/' + currentRoom + '/players/' + playerId);
 
-    // Save initial configuration on Firebase
     playerRef.set({
         id: playerId,
         name: myName,
+        character: selectedCharacter,
         x: 400,
         y: 300,
         color: Math.random() * 0xffffff
     });
 
-    // Auto delete loop hook if user leaves or close browser window tab
     playerRef.onDisconnect().remove();
 
-    // Data Sync Watcher Loop
     roomRef.child('players').on('value', (snapshot) => {
         players = snapshot.val() || {};
     });
 
-    // Handle character cleanup when a player goes offline
     roomRef.child('players').on('child_removed', (snapshot) => {
         const id = snapshot.key;
         if (playerSprites[id]) {
@@ -72,7 +108,6 @@ function startMultiplayerEngine() {
         }
     });
 
-    // Trigger Phaser Game Canvas View Framework Execution
     launchPhaserGraphicsView();
 }
 
@@ -82,61 +117,68 @@ function launchPhaserGraphicsView() {
         width: 800,
         height: 600,
         parent: 'game-container',
-        scale: {
-            mode: Phaser.Scale.FIT,
-            autoCenter: Phaser.Scale.CENTER_BOTH
-        },
-        physics: {
-            default: 'arcade',
-            arcade: { gravity: { y: 0 }, debug: false }
-        },
+        scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+        physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
         scene: { create: gameCreate, update: gameUpdate }
     };
-    new Phaser.Game(config);
+    phaserGameInstance = new Phaser.Game(config);
 }
 
+let cloudLayer;
+
 function gameCreate() {
-    // Setup Dark Aesthetic Background Grid System Canvas
-    this.cameras.main.setBackgroundColor('#2c3e50');
+    // Dynamic theme mapping assigned by World Choice View selection buttons
+    this.cameras.main.setBackgroundColor(activeWorldTheme);
     
-    // Bind Keyboard standard arrows interface mappings
+    // Clouds system setup
+    cloudLayer = this.add.group();
+    for (let i = 0; i < 5; i++) {
+        let cloud = this.add.circle(Phaser.Math.Between(0, 800), Phaser.Math.Between(50, 200), Phaser.Math.Between(30, 60), 0xffffff, 0.4);
+        this.physics.add.existing(cloud);
+        cloudLayer.add(cloud);
+    }
+
     this.cursors = this.input.keyboard.createCursorKeys();
     
-    // Output Active Connection Success Status Message
-    this.add.text(25, 25, "Room: " + currentRoom + " | Status: Connected ❤️", { 
-        fontSize: '18px', 
-        fill: '#2ecc71',
-        fontStyle: 'bold'
+    this.add.text(25, 25, "Room: " + currentRoom + " ❤️ Teamwork Active", { 
+        fontSize: '18px', fill: '#ffffff', fontStyle: 'bold'
     });
 
-    // Track Mobile Pointer Taps Anywhere on Display Area
     this.input.on('pointerdown', (pointer) => {
         playerRef.update({ x: pointer.worldX, y: pointer.worldY });
     });
 }
 
 function gameUpdate() {
+    // Soft animate clouds loop background view
+    cloudLayer.getChildren().forEach(cloud => {
+        cloud.x += 0.5;
+        if (cloud.x > 850) {
+            cloud.x = -50;
+            cloud.y = Phaser.Math.Between(50, 200);
+        }
+    });
+
     if (!playerId || !playerSprites) return;
 
-    // Loop through the data to render character bubbles dynamically
     Object.keys(players).forEach((id) => {
         const data = players[id];
 
         if (!playerSprites[id]) {
             const circle = this.add.circle(0, 0, 22, data.color);
-            const textStyle = { fontSize: '14px', fill: '#ffffff', fontStyle: 'bold', backgroundColor: '#00000055', padding: 4 };
-            const nameTag = this.add.text(0, -38, data.name, textStyle).setOrigin(0.5);
+            const labelStr = data.name + "\n(" + data.character + ")";
+            const nameTag = this.add.text(0, -45, labelStr, { 
+                fontSize: '12px', fill: '#ffffff', fontStyle: 'bold', align: 'center', backgroundColor: '#00000088', padding: 4 
+            }).setOrigin(0.5);
             
             playerSprites[id] = this.add.container(data.x, data.y, [circle, nameTag]);
             this.physics.add.existing(playerSprites[id]);
         } else {
-            // Update positioning values instantly match coordinates mirror exact
             playerSprites[id].x = data.x;
             playerSprites[id].y = data.y;
         }
     });
 
-    // Keyboard Key Action Processing Loops
     let walkSpeed = 5;
     let localX = players[playerId]?.x || 400;
     let localY = players[playerId]?.y || 300;
