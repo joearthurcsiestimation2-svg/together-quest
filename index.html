@@ -3,64 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Together Quest Mini-Arcade ❤️</title>
-    <!-- Firebase Standard Scripts -->
+    <title>Together Quest Mega-Arcade ❤️</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { margin: 0; padding: 0; background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%); overflow-x: hidden; font-family: 'Segoe UI', Arial, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; color: #fff; }
-        .container { width: 90%; max-width: 500px; background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px); padding: 25px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin: 20px auto; text-align: center; border: 1px solid rgba(255,255,255,0.2); }
-        h1 { margin: 0 0 10px 0; font-size: 28px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .container { width: 90%; max-width: 500px; background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px); padding: 25px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin: 20px auto; text-align: center; border: 1px solid rgba(255,255,255,0.2); box-sizing: border-box; }
+        h1 { margin: 0 0 10px 0; font-size: 26px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         input, button { width: 90%; padding: 14px; margin: 10px 0; font-size: 16px; border-radius: 12px; border: none; outline: none; box-sizing: border-box; font-weight: bold; }
         input { text-align: center; background: rgba(255,255,255,0.9); color: #333; }
         button { background: #ff4757; color: white; cursor: pointer; box-shadow: 0 5px 15px rgba(255, 71, 87, 0.4); transition: 0.2s; }
         button:hover { background: #ff6b81; transform: translateY(-2px); }
         
-        /* Game Hub Interface */
-        .hub-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
-        .game-card { background: white; color: #333; padding: 20px; border-radius: 16px; cursor: pointer; font-weight: bold; font-size: 18px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+        .game-card { background: white; color: #333; padding: 15px 10px; border-radius: 16px; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .game-card:hover { transform: scale(1.03); background: #fff0f2; color: #ff4757; }
         
-        /* Tic Tac Toe Grid */
+        /* Tic Tac Toe */
         .ttt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 300px; margin: 20px auto; }
         .cell { background: white; height: 80px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 36px; font-weight: bold; color: #ff4757; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         
         /* Rock Paper Scissors */
         .rps-options { display: flex; justify-content: space-around; margin: 20px 0; }
-        .rps-btn { font-size: 40px; background: white; border-radius: 50%; width: 80px; height: 80px; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: 0.2s; }
-        .rps-btn:hover { transform: scale(1.1); }
+        .rps-btn { font-size: 40px; background: white; border-radius: 50%; width: 80px; height: 80px; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
 
-        /* Balloon Pop */
-        .balloon-zone { width: 100%; height: 250px; background: rgba(0,0,0,0.2); border-radius: 16px; position: relative; overflow: hidden; margin-top: 15px; }
-        .balloon { width: 50px; height: 60px; background: #ff4757; border-radius: 50%; position: absolute; cursor: pointer; animation: floatUp 4s linear infinite; }
+        /* General Canvas Zone (Balloon, Coins, Hearts) */
+        .canvas-zone { width: 100%; height: 350px; background: rgba(0,0,0,0.3); border-radius: 16px; position: relative; overflow: hidden; margin-top: 15px; border: 2px solid rgba(255,255,255,0.2); }
+        .spawn-item { position: absolute; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 32px; user-select: none; width: 50px; height: 50px; }
         
-        .status-bar { margin: 15px 0; font-weight: bold; font-size: 16px; color: #ffeaa7; }
+        /* Memory Match */
+        .memory-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-width: 320px; margin: 20px auto; }
+        .memory-card { background: #2f3542; height: 70px; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 28px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); color: transparent; transition: background 0.2s; }
+        .memory-card.flipped { background: white; color: initial; }
+        
+        /* Truth or Dare style */
+        .td-box { background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; font-size: 20px; margin: 20px 0; min-height: 80px; display: flex; align-items: center; justify-content: center; font-weight: bold; border-left: 5px solid #ffeaa7; }
+
+        .status-bar { margin: 15px 0; font-weight: bold; font-size: 18px; color: #ffeaa7; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+        .timer-badge { font-size: 20px; color: #ff7675; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 20px; display: inline-block; margin-bottom: 10px; font-weight: bold; }
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <!-- 1. Connection Lobby Screen -->
+    <!-- Lobby Screen -->
     <div id="lobby-screen" class="container">
         <h1>Together Quest 🎮</h1>
-        <p>Apna Naam aur Ek hi Room Code daal kar connect hon!</p>
+        <p>Enter Name and shared Room Code to start playing!</p>
         <input type="text" id="playerName" placeholder="Apna Name" maxlength="10">
         <input type="text" id="roomCode" placeholder="6-Digit Room Code" maxlength="6">
         <button id="joinBtn">Let's Play! ❤️</button>
     </div>
 
-    <!-- 2. Game Selector Arcade Hub -->
+    <!-- Arcade Main Hub -->
     <div id="hub-screen" class="container hidden">
         <h1 id="welcome-msg">Arcade Hub</h1>
         <div class="status-bar" id="hub-status">Waiting for partner...</div>
         <div class="hub-grid">
-            <div class="game-card" onclick="switchGame('ttt')">❌ Tic Tac Toe ⭕</div>
-            <div class="game-card" onclick="switchGame('rps')">✊ Rock Paper Scissors ✌️</div>
-            <div class="game-card" onclick="switchGame('balloon')">🎈 Balloon Pop Race 🎈</div>
+            <div class="game-card" onclick="switchGame('ttt')">❌⭕<span>Tic Tac Toe</span></div>
+            <div class="game-card" onclick="switchGame('rps')">✊✌️<span>RPS Showdown</span></div>
+            <div class="game-card" onclick="switchGame('balloon')">🎈⏰<span>Balloon Race</span></div>
+            <div class="game-card" onclick="switchGame('truthdare')">🤫💬<span>Truth & Dare</span></div>
+            <div class="game-card" onclick="switchGame('memory')">🧩🧠<span>Memory Match</span></div>
+            <div class="game-card" onclick="switchGame('hearts')">❤️🏹<span>Catch Hearts</span></div>
+            <div class="game-card" onclick="switchGame('coins')">🪙🏃‍♂️<span>Coin Race</span></div>
         </div>
     </div>
 
-    <!-- 3. GAME WINDOW: Tic Tac Toe -->
+    <!-- Tic Tac Toe -->
     <div id="game-ttt" class="container hidden">
         <h2>❌ Tic Tac Toe ⭕</h2>
         <div class="status-bar" id="ttt-status">Your Turn</div>
@@ -75,10 +85,11 @@
             <div class="cell" onclick="playTTT(7)"></div>
             <div class="cell" onclick="playTTT(8)"></div>
         </div>
+        <button onclick="resetTicTacToe()" style="background:#2ecc71;">Restart Game</button>
         <button onclick="backToHub()">Back to Hub</button>
     </div>
 
-    <!-- 4. GAME WINDOW: Rock Paper Scissors -->
+    <!-- Rock Paper Scissors -->
     <div id="game-rps" class="container hidden">
         <h2>✊ Rock Paper Scissors ✌️</h2>
         <div class="status-bar" id="rps-status">Choose wisely...</div>
@@ -91,18 +102,67 @@
         <button onclick="backToHub()">Back to Hub</button>
     </div>
 
-    <!-- 5. GAME WINDOW: Balloon Pop -->
+    <!-- Hard Balloon Pop -->
     <div id="game-balloon" class="container hidden">
-        <h2>🎈 Balloon Pop Race 🎈</h2>
-        <div class="status-bar" id="balloon-status">Pop as many balloons as you can!</div>
+        <h2>🎈 HARD Balloon Race (30s) ⏰</h2>
+        <div class="timer-badge" id="balloon-timer">Time Left: 30s</div>
+        <div class="status-bar" id="balloon-status">Pop as fast as you can!</div>
         <div style="display:flex; justify-content: space-around; font-size: 18px; margin-bottom: 10px;">
             <div id="my-pop-score">You: 0</div>
             <div id="partner-pop-score">Partner: 0</div>
         </div>
-        <div class="balloon-zone" id="b-zone">
-            <!-- Balloons will spawn dynamically here -->
+        <div class="canvas-zone" id="b-zone"></div>
+        <button id="balloon-start-btn" onclick="triggerRaceStart('balloon')" style="background:#2ecc71;">Start Sync Race ⏱️</button>
+        <button onclick="backToHub()">Back to Hub</button>
+    </div>
+
+    <!-- Truth & Dare Screen -->
+    <div id="game-truthdare" class="container hidden">
+        <h2>🤫 Truth or Dare 💬</h2>
+        <div class="status-bar" id="td-status">Spin the wheel or Pick option!</div>
+        <div class="td-box" id="td-prompt">Click Truth or Dare to generate a fun prompt!</div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <button onclick="selectTruthDare('truth')" style="background:#74b9ff;">🤔 Truth</button>
+            <button onclick="selectTruthDare('dare')" style="background:#ff7675;">🔥 Dare</button>
         </div>
         <button onclick="backToHub()" style="margin-top:15px;">Back to Hub</button>
+    </div>
+
+    <!-- Memory Match Game Screen -->
+    <div id="game-memory" class="container hidden">
+        <h2>🧩 Memory Match 🧠</h2>
+        <div class="status-bar" id="memory-status">Find the matching pairs!</div>
+        <div class="memory-grid" id="m-grid"></div>
+        <button onclick="resetMemoryGame()" style="background:#2ecc71;">Reset Board</button>
+        <button onclick="backToHub()">Back to Hub</button>
+    </div>
+
+    <!-- Catch Hearts Game Screen -->
+    <div id="game-hearts" class="container hidden">
+        <h2>❤️ Catch Hearts Challenge ❤️</h2>
+        <div class="timer-badge" id="hearts-timer">Time Left: 30s</div>
+        <div class="status-bar" id="hearts-status">Catch the falling hearts!</div>
+        <div style="display:flex; justify-content: space-around; font-size: 18px; margin-bottom: 10px;">
+            <div id="my-heart-score">You: 0</div>
+            <div id="partner-heart-score">Partner: 0</div>
+        </div>
+        <div class="canvas-zone" id="h-zone"></div>
+        <button id="hearts-start-btn" onclick="triggerRaceStart('hearts')" style="background:#2ecc71;">Start Heart Catch 🏹</button>
+        <button onclick="backToHub()">Back to Hub</button>
+    </div>
+
+    <!-- Coin Race Game Screen -->
+    <div id="game-coins" class="container hidden">
+        <h2>🪙 Speed Coin Race 🪙</h2>
+        <div class="timer-badge" id="coins-timer">Time Left: 30s</div>
+        <div class="status-bar" id="coins-status">Click coins before your partner does!</div>
+        <div style="display:flex; justify-content: space-around; font-size: 18px; margin-bottom: 10px;">
+            <div id="my-coin-score">You: 0</div>
+            <div id="partner-coin-score">Partner: 0</div>
+        </div>
+        <div class="canvas-zone" id="c-zone"></div>
+        <button id="coins-start-btn" onclick="triggerRaceStart('coins')" style="background:#2ecc71;">Start Coin Race 🏃‍♂️</button>
+        <button onclick="backToHub()">Back to Hub</button>
     </div>
 
     <script src="game.js"></script>
