@@ -14,36 +14,38 @@ const database = firebase.database();
 let playerId, myName, currentRoom, isSinglePlayer = true;
 let roomRef, playerRef;
 let players = {}, activeGame = "hub", activeRaceType = "";
-let raceInterval, countdownTimer, aiTimer, isGameRunning = false;
+let countdownTimer, isGameRunning = false;
+
+// 2D Canvas Engine Vars
+let canvas, ctx, animFrameId, targets = [], particles = [];
+let myScore = 0, opponentScore = 0, timeRemaining = 30;
 
 const rulesBook = {
-    ttt: "Tic Tac Toe Rules:\n- Take turns placing ❌ or ⭕.\n- Complete 3 in a row horizontally, vertically, or diagonally to WIN!",
-    rps: "Rock Paper Scissors Rules:\n- Rock beats Scissors ✌️\n- Paper beats Rock ✊\n- Scissors beats Paper ✋",
-    balloon: "Balloon Pop Race:\n- Tap floating balloons fast before they escape.\n- Highest score when time runs out WINS!",
-    hearts: "Catch Hearts:\n- Tap the falling hearts before they disappear!\n- AI speed matches selected difficulty level.",
-    coins: "Speed Coins:\n- Coins pop randomly and disappear quickly!\n- Tap faster than your opponent."
+    ttt: "Tic Tac Toe:\n- Place ❌ or ⭕ turn by turn.\n- Connect 3 horizontally, vertically, or diagonally to WIN!",
+    rps: "Rock Paper Scissors:\n- Rock ✊ beats Scissors ✌️\n- Paper ✋ beats Rock ✊\n- Scissors ✌️ beats Paper ✋",
+    balloon: "Balloon Pop:\n- Tap rising balloons on screen to pop them.\n- Score higher than AI / Partner before time expires!",
+    hearts: "Catch Hearts:\n- Catch falling glowing hearts!\n- Hard difficulty moves targets faster.",
+    coins: "Speed Coins:\n- Tap coins quickly before they vanish."
 };
 
 function toggleRoomInput() {
     const mode = document.getElementById('gameModeType').value;
     const roomInp = document.getElementById('roomCode');
-    if (mode === 'multi') {
-        roomInp.classList.remove('hidden');
-    } else {
-        roomInp.classList.add('hidden');
-    }
+    if (mode === 'multi') roomInp.classList.remove('hidden');
+    else roomInp.classList.add('hidden');
 }
 
-// Session Lock Protection
 window.addEventListener('load', () => {
     toggleRoomInput();
+    canvas = document.getElementById('gameCanvas');
+    ctx = canvas.getContext('2d');
+    canvas.addEventListener('pointerdown', handleCanvasClick);
+
     const savedSession = sessionStorage.getItem('tq_session');
     if (savedSession) {
         const data = JSON.parse(savedSession);
-        myName = data.name;
-        currentRoom = data.room;
-        isSinglePlayer = data.isSingle;
-        playerId = data.id;
+        myName = data.name; currentRoom = data.room;
+        isSinglePlayer = data.isSingle; playerId = data.id;
 
         document.getElementById('lobby-screen').classList.add('hidden');
         document.getElementById('hub-screen').classList.remove('hidden');
@@ -59,12 +61,11 @@ document.getElementById('joinBtn').addEventListener('click', () => {
     isSinglePlayer = document.getElementById('gameModeType').value === 'single';
 
     if (!myName || (!isSinglePlayer && !currentRoom)) {
-        alert("Please fill required fields!");
+        alert("Please enter all required details!");
         return;
     }
 
     playerId = 'p_' + Math.random().toString(36).substr(2, 5);
-    
     sessionStorage.setItem('tq_session', JSON.stringify({
         name: myName, room: currentRoom, isSingle: isSinglePlayer, id: playerId
     }));
@@ -76,7 +77,6 @@ document.getElementById('joinBtn').addEventListener('click', () => {
     if (isSinglePlayer) {
         players[playerId] = { name: myName, score: 0 };
         players['bot'] = { name: "Smart AI 🤖", score: 0 };
-        document.getElementById('hub-status').innerText = "Single Player vs AI Active!";
     } else {
         attachFirebaseListeners();
     }
@@ -92,14 +92,9 @@ function attachFirebaseListeners() {
     roomRef.child('players').on('value', (snapshot) => {
         players = snapshot.val() || {};
         const pKeys = Object.keys(players);
-        
         document.getElementById('hub-status').innerText = pKeys.length === 2 
-            ? "Partner Connected! Ready to battle ❤️" 
-            : "Waiting for partner to join...";
-
-        if (pKeys.length === 1 && activeGame !== "hub" && isGameRunning) {
-            triggerGameEnd(true, "Opponent Left the Game!");
-        }
+            ? "Partner Connected! 🔥" 
+            : "Waiting for partner...";
         updateRaceScoreboard();
         if(activeGame === 'rps') checkRPSResult();
     });
@@ -120,10 +115,9 @@ function attachFirebaseListeners() {
 
 function openGame(gameType) {
     if (!isSinglePlayer && Object.keys(players).length < 2) {
-        alert("Waiting for partner to connect!");
+        alert("Waiting for partner!");
         return;
     }
-    
     if (!isSinglePlayer) roomRef.update({ activeScreen: gameType });
     else switchLayout(gameType);
 }
@@ -136,8 +130,7 @@ function switchLayout(screen) {
     if (screen === 'hub') {
         document.getElementById('hub-screen').classList.remove('hidden');
         isGameRunning = false;
-        clearInterval(raceInterval);
-        clearInterval(aiTimer);
+        cancelAnimationFrame(animFrameId);
         return;
     }
 
@@ -152,7 +145,7 @@ function switchLayout(screen) {
     startPrepCountdown(() => {
         isGameRunning = true;
         if (screen === 'ttt') initTTT();
-        if (['balloon', 'hearts', 'coins'].includes(screen)) startRaceEngine(screen);
+        if (['balloon', 'hearts', 'coins'].includes(screen)) initGraphicsEngine(screen);
     });
 }
 
@@ -164,11 +157,9 @@ function startPrepCountdown(callback) {
 
     const timer = setInterval(() => {
         count--;
-        if (count > 0) {
-            overlay.innerText = count;
-        } else if (count === 0) {
-            overlay.innerText = "GO!";
-        } else {
+        if (count > 0) overlay.innerText = count;
+        else if (count === 0) overlay.innerText = "GO!";
+        else {
             clearInterval(timer);
             overlay.classList.add('hidden');
             callback();
@@ -178,9 +169,8 @@ function startPrepCountdown(callback) {
 
 function triggerGameEnd(didIWin, message) {
     isGameRunning = false;
-    clearInterval(raceInterval);
     clearInterval(countdownTimer);
-    clearInterval(aiTimer);
+    cancelAnimationFrame(animFrameId);
 
     const modal = document.getElementById('result-modal');
     const title = document.getElementById('modal-status-title');
@@ -188,14 +178,14 @@ function triggerGameEnd(didIWin, message) {
 
     modal.classList.remove('hidden');
     if (didIWin === "tie") {
-        title.innerText = "IT'S A TIE! 🤝";
+        title.innerText = "IT'S A DRAW! 🤝";
         title.className = "modal-title";
         title.style.color = "#ffeaa7";
     } else if (didIWin) {
-        title.innerText = "YOU WIN! 🎉";
+        title.innerText = "VICTORY! 🎉";
         title.className = "modal-title win-title";
     } else {
-        title.innerText = "YOU LOSE! 💔";
+        title.innerText = "DEFEAT! 💔";
         title.className = "modal-title lose-title";
     }
     desc.innerText = message || "";
@@ -219,19 +209,15 @@ function showRules(type) {
 }
 function closeRules() { document.getElementById('rules-modal').classList.add('hidden'); }
 
-// ==================== [1] TIC TAC TOE (AI & MULTI) ====================
+// ==================== [1] TIC TAC TOE ====================
 function initTTT() {
     renderTTTBoard(Array(9).fill(""));
-    if (!isSinglePlayer) {
-        roomRef.child('ttt').set({ board: Array(9).fill(""), turn: Object.keys(players)[0] });
-    } else {
-        document.getElementById('ttt-status').innerText = "Your Turn! ⚡";
-    }
+    if (!isSinglePlayer) roomRef.child('ttt').set({ board: Array(9).fill(""), turn: Object.keys(players)[0] });
+    else document.getElementById('ttt-status').innerText = "Your Turn! ⚡";
 }
 
 function playTTT(idx) {
     if (!isGameRunning) return;
-
     if (isSinglePlayer) {
         let cells = document.querySelectorAll('#game-ttt .cell');
         if (cells[idx].innerText !== "") return;
@@ -240,10 +226,9 @@ function playTTT(idx) {
         if (checkTTTLocalWin("❌")) return triggerGameEnd(true, "You defeated Smart AI!");
         if (checkTTTFull()) return triggerGameEnd("tie", "Match Tied!");
 
-        document.getElementById('ttt-status').innerText = "AI is thinking... 🤔";
-        
+        document.getElementById('ttt-status').innerText = "AI thinking... 🤔";
         const diff = document.getElementById('difficultySelect').value;
-        const delay = diff === 'easy' ? 1000 : diff === 'medium' ? 600 : 300;
+        const delay = diff === 'easy' ? 900 : diff === 'medium' ? 500 : 250;
 
         setTimeout(() => {
             if(!isGameRunning) return;
@@ -251,19 +236,15 @@ function playTTT(idx) {
             cells.forEach((c, i) => { if(c.innerText === "") emptyIdxs.push(i); });
             if(emptyIdxs.length === 0) return;
             
-            let aiPick;
-            if (diff === 'hard') {
-                aiPick = findWinningMove(cells, "⭕") ?? findWinningMove(cells, "❌") ?? emptyIdxs[0];
-            } else {
-                aiPick = emptyIdxs[Math.floor(Math.random() * emptyIdxs.length)];
-            }
+            let aiPick = (diff === 'hard') 
+                ? (findWinningMove(cells, "⭕") ?? findWinningMove(cells, "❌") ?? emptyIdxs[0])
+                : emptyIdxs[Math.floor(Math.random() * emptyIdxs.length)];
 
             cells[aiPick].innerText = "⭕";
             if (checkTTTLocalWin("⭕")) triggerGameEnd(false, "AI Outsmarted You!");
             else if (checkTTTFull()) triggerGameEnd("tie", "Match Tied!");
             else document.getElementById('ttt-status').innerText = "Your Turn! ⚡";
         }, delay);
-
     } else {
         roomRef.child('ttt').once('value', snapshot => {
             const data = snapshot.val() || {};
@@ -281,9 +262,7 @@ function findWinningMove(cells, symbol) {
     const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
     for (let w of wins) {
         let vals = w.map(i => cells[i].innerText);
-        if (vals.filter(v => v === symbol).length === 2 && vals.includes("")) {
-            return w[vals.indexOf("")];
-        }
+        if (vals.filter(v => v === symbol).length === 2 && vals.includes("")) return w[vals.indexOf("")];
     }
     return null;
 }
@@ -297,13 +276,12 @@ function evaluateTTT(b, turn) {
     for (let p of wins) {
         if (b[p[0]] && b[p[0]] === b[p[1]] && b[p[0]] === b[p[2]]) {
             const pKeys = Object.keys(players);
-            const winningPlayerId = b[p[0]] === "❌" ? pKeys[0] : pKeys[1];
-            triggerGameEnd(winningPlayerId === playerId, "3-in-a-row completed!");
+            triggerGameEnd(b[p[0]] === (pKeys[0] === playerId ? "❌" : "⭕"), "3-in-a-row completed!");
             return;
         }
     }
     if (!b.includes("")) triggerGameEnd("tie", "Board full!");
-    else document.getElementById('ttt-status').innerText = turn === playerId ? "Your Turn! ⚡" : "Opponent's Turn... 💭";
+    else document.getElementById('ttt-status').innerText = turn === playerId ? "Your Turn! ⚡" : "Opponent Turn... 💭";
 }
 
 function checkTTTLocalWin(m) {
@@ -338,85 +316,133 @@ function checkRPSResult() {
         if(p1.currentMove === p2.currentMove) triggerGameEnd("tie", `Both played ${p1.currentMove}`);
         else {
             const p1Wins = (p1.currentMove==='✊'&&p2.currentMove==='✌️')||(p1.currentMove==='✋'&&p2.currentMove==='✊')||(p1.currentMove==='✌️'&&p2.currentMove==='✋');
-            const winnerId = p1Wins ? p1.id : p2.id;
-            triggerGameEnd(winnerId === playerId, `${p1.name}: ${p1.currentMove} vs ${p2.name}: ${p2.currentMove}`);
+            triggerGameEnd(p1Wins ? p1.id === playerId : p2.id === playerId, `${p1.name}: ${p1.currentMove} vs ${p2.name}: ${p2.currentMove}`);
         }
     }
 }
 
-// ==================== [3] RACING ENGINES (BALLOON, HEARTS, COINS) ====================
-function startRaceEngine(type) {
-    const diff = document.getElementById('difficultySelect').value;
-    const zone = document.getElementById('race-zone');
-    zone.innerHTML = "";
+// ==================== [3] HIGH-GRAPHICS 2D CANVAS ENGINE ====================
+function initGraphicsEngine(type) {
+    targets = []; particles = [];
+    myScore = 0; opponentScore = 0; timeRemaining = 30;
     
-    let speed = diff === 'easy' ? 2 : diff === 'medium' ? 4 : 7;
-    let spawnRate = diff === 'easy' ? 700 : diff === 'medium' ? 450 : 250;
-    let myScore = 0, opponentScore = 0;
-    
-    let timeRem = 30;
-    document.getElementById('race-timer').innerText = `Time: ${timeRem}s`;
-    document.getElementById('my-race-score').innerText = "You: 0";
-    document.getElementById('partner-race-score').innerText = isSinglePlayer ? "AI: 0" : "Opponent: 0";
+    document.getElementById('my-race-score').innerText = `You: ${myScore}`;
+    document.getElementById('partner-race-score').innerText = isSinglePlayer ? `AI: ${opponentScore}` : "Opponent: 0";
 
+    const diff = document.getElementById('difficultySelect').value;
+    const spawnRate = diff === 'easy' ? 40 : diff === 'medium' ? 25 : 15;
+    let spawnCounter = 0;
+
+    clearInterval(countdownTimer);
     countdownTimer = setInterval(() => {
-        timeRem--;
-        document.getElementById('race-timer').innerText = `Time: ${timeRem}s`;
-        if (timeRem <= 0) {
-            triggerGameEnd(myScore > opponentScore ? true : myScore < opponentScore ? false : "tie", `Score: You (${myScore}) - Enemy (${opponentScore})`);
+        timeRemaining--;
+        document.getElementById('race-timer').innerText = `${timeRemaining}s`;
+        if (timeRemaining <= 0) {
+            triggerGameEnd(myScore > opponentScore ? true : myScore < opponentScore ? false : "tie", `Final Score: You (${myScore}) - Enemy (${opponentScore})`);
         }
     }, 1000);
 
-    // Main Spawner Loop
-    raceInterval = setInterval(() => {
+    function gameLoop() {
         if (!isGameRunning) return;
-        
-        const item = document.createElement('div');
-        item.className = 'spawn-item';
-        item.innerText = type === 'balloon' ? '🎈' : type === 'hearts' ? '❤️' : '🪙';
-        item.style.left = Math.random() * (zone.clientWidth - 45) + "px";
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        if (type === 'coins') {
-            item.style.top = Math.random() * (zone.clientHeight - 45) + "px";
-            setTimeout(() => item.remove(), diff === 'easy' ? 1000 : 600);
-        } else {
-            let pos = type === 'balloon' ? 320 : -40;
-            item.style.top = pos + "px";
-            let fly = setInterval(() => {
-                pos += type === 'balloon' ? -speed : speed;
-                item.style.top = pos + "px";
-                if (pos < -50 || pos > 330) { clearInterval(fly); item.remove(); }
-            }, 20);
-            item.flyRef = fly;
+        // Spawn logic
+        spawnCounter++;
+        if (spawnCounter % spawnRate === 0) {
+            spawnTarget(type, diff);
         }
 
-        item.addEventListener('pointerdown', () => {
-            if (item.flyRef) clearInterval(item.flyRef);
-            item.remove();
-            myScore++;
-            document.getElementById('my-race-score').innerText = `You: ${myScore}`;
-            if(!isSinglePlayer) playerRef.child('score').set(myScore);
-        });
-
-        zone.appendChild(item);
-    }, spawnRate);
-
-    // Active AI Engine Simulator for Single Player
-    if (isSinglePlayer) {
-        const aiHitChance = diff === 'easy' ? 0.35 : diff === 'medium' ? 0.6 : 0.85;
-        const aiSpeedRate = diff === 'easy' ? 1000 : diff === 'medium' ? 600 : 350;
-
-        aiTimer = setInterval(() => {
-            if (!isGameRunning) return;
-            const targets = zone.querySelectorAll('.spawn-item');
-            if (targets.length > 0 && Math.random() < aiHitChance) {
-                const target = targets[Math.floor(Math.random() * targets.length)];
-                if (target.flyRef) clearInterval(target.flyRef);
-                target.remove();
+        // Single Player AI Auto Hit
+        if (isSinglePlayer && Math.random() < (diff === 'easy' ? 0.02 : diff === 'medium' ? 0.04 : 0.08)) {
+            if (targets.length > 0) {
+                let aiIdx = Math.floor(Math.random() * targets.length);
+                let t = targets[aiIdx];
+                createVFX(t.x, t.y, '#ff4757');
+                targets.splice(aiIdx, 1);
                 opponentScore++;
                 document.getElementById('partner-race-score').innerText = `AI: ${opponentScore}`;
             }
-        }, aiSpeedRate);
+        }
+
+        // Update & Render Targets
+        for (let i = targets.length - 1; i >= 0; i--) {
+            let t = targets[i];
+            t.y += t.vy;
+            
+            // Draw Target Graphics
+            ctx.save();
+            ctx.shadowColor = t.glow;
+            ctx.shadowBlur = 12;
+            ctx.font = `${t.size}px Arial`;
+            ctx.fillText(t.symbol, t.x - t.size/2, t.y + t.size/2);
+            ctx.restore();
+
+            if (t.y < -40 || t.y > canvas.height + 40) targets.splice(i, 1);
+        }
+
+        // Render VFX Explosions
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.x += p.vx; p.y += p.vy; p.alpha -= 0.04;
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = Math.max(0, p.alpha);
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+            if (p.alpha <= 0) particles.splice(i, 1);
+        }
+        ctx.globalAlpha = 1.0;
+
+        animFrameId = requestAnimationFrame(gameLoop);
+    }
+    gameLoop();
+}
+
+function spawnTarget(type, diff) {
+    let speedMult = diff === 'easy' ? 1 : diff === 'medium' ? 1.8 : 2.5;
+    let symbol = type === 'balloon' ? '🎈' : type === 'hearts' ? '❤️' : '🪙';
+    let glow = type === 'balloon' ? '#ff3366' : type === 'hearts' ? '#ff4757' : '#ffd700';
+
+    targets.push({
+        x: Math.random() * (canvas.width - 50) + 25,
+        y: type === 'balloon' ? canvas.height + 30 : -20,
+        vy: type === 'balloon' ? -speedMult * (1.5 + Math.random()) : speedMult * (1.5 + Math.random()),
+        size: 36,
+        symbol: symbol,
+        glow: glow
+    });
+}
+
+function handleCanvasClick(e) {
+    if (!isGameRunning) return;
+    const rect = canvas.getBoundingClientRect();
+    const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+    for (let i = targets.length - 1; i >= 0; i--) {
+        let t = targets[i];
+        let dist = Math.hypot(clickX - t.x, clickY - (t.y + 5));
+        if (dist < t.size) {
+            createVFX(t.x, t.y, t.glow);
+            targets.splice(i, 1);
+            myScore++;
+            document.getElementById('my-race-score').innerText = `You: ${myScore}`;
+            if (!isSinglePlayer) playerRef.child('score').set(myScore);
+            break;
+        }
+    }
+}
+
+function createVFX(x, y, color) {
+    for (let i = 0; i < 12; i++) {
+        particles.push({
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * 6,
+            vy: (Math.random() - 0.5) * 6,
+            size: Math.random() * 4 + 2,
+            color: color,
+            alpha: 1.0
+        });
     }
 }
 
