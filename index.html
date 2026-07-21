@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Together Quest Mega Arcade 🎮✨</title>
+    <title>Together Quest Mega Arcade v4.0 Ultimate 🎮✨</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -25,7 +25,7 @@
             color: #fff; min-height: 100vh;
             display: flex; flex-direction: column; align-items: center;
             overflow-x: hidden; touch-action: manipulation;
-            padding-bottom: 70px;
+            padding-bottom: 80px;
         }
 
         .container {
@@ -62,15 +62,15 @@
             font-size: 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); margin-bottom: 12px;
         }
 
-        .hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 15px; }
+        .hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
         .game-card {
             background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-            padding: 18px 12px; border-radius: 22px; cursor: pointer; font-weight: 800;
+            padding: 16px 10px; border-radius: 22px; cursor: pointer; font-weight: 800; font-size: 13px;
             border: 1px solid rgba(255,255,255,0.08); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .game-card:hover { transform: translateY(-5px) scale(1.02); border-color: var(--primary); box-shadow: 0 10px 25px rgba(255,51,102,0.3); }
-        .game-card span { font-size: 36px; margin-bottom: 6px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
+        .game-card:hover { transform: translateY(-4px) scale(1.02); border-color: var(--primary); box-shadow: 0 10px 25px rgba(255,51,102,0.3); }
+        .game-card span { font-size: 32px; margin-bottom: 4px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
 
         #countdown-overlay {
             position: fixed; inset: 0; background: rgba(10, 11, 20, 0.9);
@@ -87,54 +87,75 @@
         .modal-content {
             background: linear-gradient(135deg, #1e203c, #141527);
             border: 2px solid rgba(255,255,255,0.15);
-            padding: 30px; border-radius: 28px; text-align: center; width: 85%; max-width: 360px;
+            padding: 25px; border-radius: 28px; text-align: center; width: 88%; max-width: 360px;
             box-shadow: 0 25px 60px rgba(0,0,0,0.8);
             animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-
-        .modal-title { font-size: 30px; font-weight: 800; margin-bottom: 10px; }
-        .win-title { color: #00ffaa; text-shadow: 0 0 20px rgba(0,255,170,0.5); }
-        .lose-title { color: #ff3366; text-shadow: 0 0 20px rgba(255,51,102,0.5); }
 
         .ttt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 300px; margin: 15px auto; }
         .cell {
             background: rgba(255,255,255,0.05); height: 85px; border-radius: 18px;
             font-size: 42px; display: flex; justify-content: center; align-items: center;
             border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: 0.2s;
-            box-shadow: inset 0 2px 5px rgba(255,255,255,0.05);
         }
-        .cell:hover { background: rgba(255,255,255,0.1); transform: scale(1.03); }
 
         #gameCanvas {
-            width: 100%; height: 320px; background: #0c0d18;
+            width: 100%; height: 300px; background: #0c0d18;
             border-radius: 20px; border: 1px solid rgba(255,255,255,0.15);
             box-shadow: inset 0 0 20px rgba(0,0,0,0.8); cursor: crosshair; touch-action: none;
         }
 
-        .wheel-wrapper { position: relative; width: 220px; height: 220px; margin: 15px auto; }
+        .wheel-wrapper { position: relative; width: 200px; height: 200px; margin: 15px auto; }
         .wheel-pointer {
             position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
             width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent;
-            border-top: 24px solid var(--accent); z-index: 10; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+            border-top: 24px solid var(--accent); z-index: 10;
         }
         .wheel-circle {
             width: 100%; height: 100%; border-radius: 50%; border: 6px solid #fff;
             background: conic-gradient(#00b894 0deg 90deg, #d63031 90deg 180deg, #00b894 180deg 270deg, #d63031 270deg 360deg);
-            position: relative; overflow: hidden; box-shadow: 0 0 25px rgba(255,255,255,0.2);
-            transition: transform 3s cubic-bezier(0.15, 0.9, 0.2, 1);
+            position: relative; overflow: hidden; transition: transform 3s cubic-bezier(0.15, 0.9, 0.2, 1);
         }
-        .wheel-label { position: absolute; width: 50%; height: 50%; transform-origin: 100% 100%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
-        .wl-1 { transform: rotate(0deg); } .wl-2 { transform: rotate(90deg); }
-        .wl-3 { transform: rotate(180deg); } .wl-4 { transform: rotate(270deg); }
 
         .td-card {
-            background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
-            border: 1px dashed var(--accent); padding: 16px; border-radius: 20px;
-            margin: 10px 0; min-height: 80px; display: flex; align-items: center; justify-content: center;
-            font-size: 15px; font-weight: 600; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            background: rgba(255,255,255,0.05); border: 1px dashed var(--accent);
+            padding: 14px; border-radius: 20px; margin: 10px 0; min-height: 70px;
+            display: flex; align-items: center; justify-content: center; font-size: 14px;
         }
 
-        /* Advanced Floating Live Chat Box UI */
+        /* Mystery Box Styles */
+        .box-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
+        .m-box {
+            background: rgba(255,255,255,0.08); height: 80px; border-radius: 18px;
+            font-size: 38px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border: 1px solid rgba(255,255,255,0.15); transition: 0.3s;
+        }
+        .m-box:hover { transform: scale(1.05); border-color: var(--accent); }
+
+        /* Big Red Button */
+        .red-btn-container { margin: 30px auto; width: 140px; height: 140px; }
+        .big-red-btn {
+            width: 100%; height: 100%; border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #ff4d4d, #990000);
+            border: 6px solid #ff9999; box-shadow: 0 15px 35px rgba(255, 0, 0, 0.6);
+            font-size: 45px; cursor: pointer; transition: transform 0.1s; display: flex; align-items: center; justify-content: center;
+        }
+        .big-red-btn:active { transform: scale(0.92); box-shadow: 0 5px 15px rgba(255, 0, 0, 0.8); }
+
+        /* Drawing Canvas */
+        #drawCanvas { background: #fff; border-radius: 16px; width: 100%; height: 240px; touch-action: none; cursor: crosshair; }
+        .draw-tools { display: flex; gap: 8px; justify-content: center; margin: 10px 0; }
+        .color-dot { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid #fff; }
+
+        /* Choice Buttons */
+        .choice-btn-grid { display: flex; gap: 10px; margin: 15px 0; }
+        .choice-card { flex: 1; padding: 20px 10px; background: rgba(255,255,255,0.08); border-radius: 18px; cursor: pointer; font-size: 16px; border: 1px solid rgba(255,255,255,0.15); }
+        .choice-card:hover { border-color: var(--accent); background: rgba(255,255,255,0.15); }
+
+        /* Daily Quest Board */
+        .quest-item { background: rgba(255,255,255,0.06); padding: 12px; border-radius: 14px; margin: 8px 0; text-align: left; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+
+        /* Floating Live Chat Box UI */
         #chat-widget {
             position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
             width: 92%; max-width: 480px; z-index: 400; background: rgba(15, 16, 29, 0.95);
@@ -151,18 +172,16 @@
 
         .chat-header-actions { display: flex; gap: 8px; align-items: center; }
         .chat-action-btn { background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 2px 8px; border-radius: 8px; font-size: 11px; cursor: pointer; }
-        .chat-action-btn:hover { background: rgba(255,51,102,0.6); }
 
         #chat-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
         #chat-messages {
-            height: 130px; overflow-y: auto; text-align: left; font-size: 12px;
-            display: flex; flex-direction: column; gap: 6px; padding-right: 4px;
+            height: 120px; overflow-y: auto; text-align: left; font-size: 12px;
+            display: flex; flex-direction: column; gap: 6px;
         }
 
         .chat-msg { background: rgba(255,255,255,0.07); padding: 8px 10px; border-radius: 12px; word-break: break-word; }
-        .chat-msg b { color: var(--primary); }
         .chat-msg audio { height: 30px; width: 100%; margin-top: 4px; }
-        .chat-img { max-width: 100%; max-height: 120px; border-radius: 10px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.2); }
+        .chat-img { max-width: 100%; max-height: 120px; border-radius: 10px; margin-top: 5px; }
 
         #chat-input-row { display: flex; gap: 6px; margin-top: 4px; align-items: center; }
         #chat-input-row input[type="text"] { margin: 0; padding: 8px 12px; font-size: 12px; flex: 1; }
@@ -176,7 +195,7 @@
         }
 
         .icon-btn.recording { background: #ff3366 !important; animation: pulse 1s infinite; }
-        .icon-btn.call-active { background: #00b894 !important; border-color: #00ffaa !important; animation: pulse 1.5s infinite; }
+        .icon-btn.call-active { background: #00b894 !important; animation: pulse 1.5s infinite; }
 
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         .hidden { display: none !important; }
@@ -187,10 +206,10 @@
 
     <div id="countdown-overlay" class="hidden">3</div>
 
-    <!-- Result Pop-up Modal -->
+    <!-- Result Modal -->
     <div id="result-modal" class="modal hidden">
         <div class="modal-content">
-            <div id="modal-status-title" class="modal-title win-title">VICTORY! 🎉</div>
+            <div id="modal-status-title" style="font-size:28px; font-weight:800; color:#00ffaa;">VICTORY! 🎉</div>
             <p id="modal-desc" style="color:#a0a5c0; margin-bottom:20px;">Exceptional Performance!</p>
             <button onclick="requestReplay()" style="background: linear-gradient(135deg, #00b894, #00cec9);">Play Again 🔄</button>
             <button onclick="backToHub()" style="background: rgba(255,255,255,0.1); margin-top:8px;">Back to Hub 🚪</button>
@@ -200,7 +219,7 @@
     <!-- Rules Modal -->
     <div id="rules-modal" class="modal hidden">
         <div class="modal-content">
-            <h3 style="color:var(--accent);">Game Instructions 📜</h3>
+            <h3 style="color:var(--accent);">Instructions 📜</h3>
             <p id="rules-text" style="text-align:left; font-size:14px; color:#cbd5e1; line-height:1.6;"></p>
             <button onclick="closeRules()" style="background:#3b82f6;">Got It!</button>
         </div>
@@ -209,7 +228,7 @@
     <!-- Login Lobby -->
     <div id="lobby-screen" class="container">
         <h1>Together Quest ✨</h1>
-        <p style="font-size:14px; color:#a0a5c0; margin-bottom:20px;">Arcade Engine v3.0 Ultimate Chat</p>
+        <p style="font-size:14px; color:#a0a5c0; margin-bottom:20px;">Arcade Suite v4.0 Ultimate</p>
         
         <select id="gameModeType" onchange="toggleRoomInput()">
             <option value="single">👤 Single Player (Vs Smart AI)</option>
@@ -223,7 +242,7 @@
 
     <!-- Arcade Hub -->
     <div id="hub-screen" class="container hidden">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <span style="font-size: 13px; color: var(--accent); font-weight: bold;" id="hub-status">Engine Ready</span>
             <button onclick="exitToMainMenu()" style="width: auto; padding: 6px 14px; margin: 0; font-size: 12px; background: rgba(255,51,102,0.2); border: 1px solid var(--primary); color: #fff;">
                 🏠 Main Menu
@@ -232,12 +251,12 @@
 
         <h2 id="welcome-msg" style="margin-top: 5px;">Arcade Hub</h2>
 
-        <div style="margin:16px 0 6px 0; text-align:left;">
+        <div style="margin:10px 0 6px 0; text-align:left;">
             <label style="font-size:12px; color:#8085a0; font-weight:600;">AI DIFFICULTY LEVEL:</label>
             <select id="difficultySelect">
                 <option value="easy">🟢 Easy Mode</option>
                 <option value="medium" selected>🟡 Medium Mode</option>
-                <option value="hard">🔴 Hard (Balanced Challenge)</option>
+                <option value="hard">🔴 Hard Challenge</option>
             </select>
         </div>
 
@@ -248,29 +267,30 @@
             <div class="game-card" onclick="openGame('hearts')"><span>❤️</span>Catch Hearts</div>
             <div class="game-card" onclick="openGame('coins')"><span>🪙</span>Speed Coins</div>
             <div class="game-card" onclick="openGame('td')"><span>🎯</span>Truth or Dare</div>
+            <!-- NAYI GAMES ADDED -->
+            <div class="game-card" onclick="openGame('mystery')"><span>🎁</span>Mystery Box</div>
+            <div class="game-card" onclick="openGame('whoknows')"><span>🧠</span>Who Knows Better</div>
+            <div class="game-card" onclick="openGame('secret')"><span>🔒</span>Secret Choice</div>
+            <div class="game-card" onclick="openGame('draw')"><span>🎨</span>Draw & Guess</div>
+            <div class="game-card" onclick="openGame('redbtn')"><span>🔴</span>Red Button</div>
+            <div class="game-card" onclick="openGame('quests')"><span>🐥</span>Chuza Quests</div>
         </div>
     </div>
 
-    <!-- Tic Tac Toe Screen -->
+    <!-- 1. Tic Tac Toe -->
     <div id="game-ttt" class="container hidden">
         <button class="btn-rule" onclick="showRules('ttt')">Rules 📜</button>
         <h2>❌ Tic Tac Toe ⭕</h2>
         <div id="ttt-status" style="color:var(--accent); font-weight:bold; margin-bottom:10px;">Initializing...</div>
         <div class="ttt-grid">
-            <div class="cell" onclick="playTTT(0)"></div>
-            <div class="cell" onclick="playTTT(1)"></div>
-            <div class="cell" onclick="playTTT(2)"></div>
-            <div class="cell" onclick="playTTT(3)"></div>
-            <div class="cell" onclick="playTTT(4)"></div>
-            <div class="cell" onclick="playTTT(5)"></div>
-            <div class="cell" onclick="playTTT(6)"></div>
-            <div class="cell" onclick="playTTT(7)"></div>
-            <div class="cell" onclick="playTTT(8)"></div>
+            <div class="cell" onclick="playTTT(0)"></div><div class="cell" onclick="playTTT(1)"></div><div class="cell" onclick="playTTT(2)"></div>
+            <div class="cell" onclick="playTTT(3)"></div><div class="cell" onclick="playTTT(4)"></div><div class="cell" onclick="playTTT(5)"></div>
+            <div class="cell" onclick="playTTT(6)"></div><div class="cell" onclick="playTTT(7)"></div><div class="cell" onclick="playTTT(8)"></div>
         </div>
         <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:15px;">Back to Hub 🚪</button>
     </div>
 
-    <!-- RPS Screen -->
+    <!-- 2. RPS Screen -->
     <div id="game-rps" class="container hidden">
         <button class="btn-rule" onclick="showRules('rps')">Rules 📜</button>
         <h2>✊ Rock Paper Scissors ✌️</h2>
@@ -283,7 +303,7 @@
         <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:20px;">Back to Hub 🚪</button>
     </div>
 
-    <!-- 2D Canvas Graphical Engine Screen -->
+    <!-- 3. Canvas Engine Screen (Balloon, Hearts, Coins) -->
     <div id="game-race" class="container hidden">
         <button class="btn-rule" onclick="showRules(activeRaceType)">Rules 📜</button>
         <h2 id="race-title">Graphic Arena</h2>
@@ -292,11 +312,11 @@
             <div id="my-race-score" style="color:#00ffaa;">You: 0</div>
             <div id="partner-race-score" style="color:#ff7675;">Opponent: 0</div>
         </div>
-        <canvas id="gameCanvas" width="400" height="320"></canvas>
+        <canvas id="gameCanvas" width="400" height="300"></canvas>
         <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:12px;">Back to Hub 🚪</button>
     </div>
 
-    <!-- Truth or Dare Wheel Screen -->
+    <!-- 4. Truth or Dare Screen -->
     <div id="game-td" class="container hidden">
         <button class="btn-rule" onclick="showRules('td')">Rules 📜</button>
         <h2>🎯 Spin the Wheel 🎯</h2>
@@ -304,20 +324,90 @@
         
         <div class="wheel-wrapper">
             <div class="wheel-pointer"></div>
-            <div class="wheel-circle" id="wheelCircle">
-                <div class="wheel-label wl-1">TRUTH 😇</div>
-                <div class="wheel-label wl-2">DARE 😈</div>
-                <div class="wheel-label wl-3">TRUTH 😇</div>
-                <div class="wheel-label wl-4">DARE 😈</div>
-            </div>
+            <div class="wheel-circle" id="wheelCircle"></div>
         </div>
 
-        <div class="td-card" id="td-display-card">
-            Tap "SPIN WHEEL 🎡" to select a challenge!
-        </div>
+        <div class="td-card" id="td-display-card">Tap "SPIN WHEEL 🎡" to select a challenge!</div>
 
         <button id="spinWheelBtn" onclick="spinTDWheel()" style="background:linear-gradient(135deg, #00b894, #00cec9); font-size:16px;">SPIN WHEEL 🎡</button>
         <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:8px;">Back to Hub 🚪</button>
+    </div>
+
+    <!-- 5. MYSTERY BOX SCREEN -->
+    <div id="game-mystery" class="container hidden">
+        <button class="btn-rule" onclick="showRules('mystery')">Rules 📜</button>
+        <h2>📦 Chuza's Mystery Vault 📦</h2>
+        <div id="mystery-status" style="color:var(--accent); margin-bottom:10px;">Select a box to unlock rewards!</div>
+        <div class="box-grid">
+            <div class="m-box" onclick="openMysteryBox(0)">🎁</div>
+            <div class="m-box" onclick="openMysteryBox(1)">🎁</div>
+            <div class="m-box" onclick="openMysteryBox(2)">🎁</div>
+            <div class="m-box" onclick="openMysteryBox(3)">🎁</div>
+            <div class="m-box" onclick="openMysteryBox(4)">✨</div>
+            <div class="m-box" onclick="openMysteryBox(5)">🎁</div>
+        </div>
+        <div id="mystery-result" class="td-card">Select any mystery box above!</div>
+        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1);">Back to Hub 🚪</button>
+    </div>
+
+    <!-- 6. WHO KNOWS BETTER SCREEN -->
+    <div id="game-whoknows" class="container hidden">
+        <button class="btn-rule" onclick="showRules('whoknows')">Rules 📜</button>
+        <h2>🧠 Who Knows Better? 🦉</h2>
+        <div id="wk-question" style="font-size:16px; font-weight:700; margin:15px 0; color:var(--accent);">Loading question...</div>
+        <div id="wk-options"></div>
+        <div id="wk-result" class="td-card" style="margin-top:10px;">Pick your answer!</div>
+        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:10px;">Back to Hub 🚪</button>
+    </div>
+
+    <!-- 7. SECRET CHOICE SCREEN -->
+    <div id="game-secret" class="container hidden">
+        <button class="btn-rule" onclick="showRules('secret')">Rules 📜</button>
+        <h2>🔒 Secret Choice 🐥</h2>
+        <div id="secret-status" style="margin-bottom:15px; color:var(--accent);">Match choices with your partner!</div>
+        <div id="secret-options" class="choice-btn-grid"></div>
+        <div id="secret-result" class="td-card">Pick one option!</div>
+        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:10px;">Back to Hub 🚪</button>
+    </div>
+
+    <!-- 8. DRAW & GUESS SCREEN -->
+    <div id="game-draw" class="container hidden">
+        <button class="btn-rule" onclick="showRules('draw')">Rules 📜</button>
+        <h2>🎨 Draw & Guess Carnival 🎨</h2>
+        <div id="draw-word" style="color:var(--accent); font-weight:800; font-size:18px; margin-bottom:8px;">Word: APPLE</div>
+        <canvas id="drawCanvas" width="380" height="240"></canvas>
+        <div class="draw-tools">
+            <div class="color-dot" style="background:#000;" onclick="setDrawColor('#000')"></div>
+            <div class="color-dot" style="background:#ff3366;" onclick="setDrawColor('#ff3366')"></div>
+            <div class="color-dot" style="background:#00b894;" onclick="setDrawColor('#00b894')"></div>
+            <div class="color-dot" style="background:#ffd700;" onclick="setDrawColor('#ffd700')"></div>
+            <button onclick="clearDrawCanvas()" style="width:auto; padding:4px 10px; margin:0; font-size:12px;">Clear 🗑️</button>
+        </div>
+        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1);">Back to Hub 🚪</button>
+    </div>
+
+    <!-- 9. RED BUTTON CHAOS SCREEN -->
+    <div id="game-redbtn" class="container hidden">
+        <button class="btn-rule" onclick="showRules('redbtn')">Rules 📜</button>
+        <h2>🔴 Mysterious Red Button 🔴</h2>
+        <p style="font-size:13px; color:#a0a5c0;">Dabao aur dekho kya hota hai!</p>
+        <div class="red-btn-container">
+            <div class="big-red-btn" onclick="pressRedButton()">🔴</div>
+        </div>
+        <div id="redbtn-event" class="td-card">Press the Button!</div>
+        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1);">Back to Hub 🚪</button>
+    </div>
+
+    <!-- 10. CHUZA'S DAILY QUESTS SCREEN -->
+    <div id="game-quests" class="container hidden">
+        <button class="btn-rule" onclick="showRules('quests')">Rules 📜</button>
+        <h2>🐥 Chuza's Daily Quests 🌟</h2>
+        <div id="quest-list">
+            <div class="quest-item"><span>🪙 Collect 20 Coins</span><button style="width:auto; padding:4px 8px; margin:0; font-size:11px;" onclick="claimQuest(this)">Claim</button></div>
+            <div class="quest-item"><span>🦋 Catch 5 Butterflies</span><button style="width:auto; padding:4px 8px; margin:0; font-size:11px;" onclick="claimQuest(this)">Claim</button></div>
+            <div class="quest-item"><span>📸 Take 3 Game Screenshots</span><button style="width:auto; padding:4px 8px; margin:0; font-size:11px;" onclick="claimQuest(this)">Claim</button></div>
+        </div>
+        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:15px;">Back to Hub 🚪</button>
     </div>
 
     <!-- Floating Live Chat Suite -->

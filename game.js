@@ -17,43 +17,48 @@ let players = {}, activeGame = "hub", activeRaceType = "";
 let countdownTimer, isGameRunning = false;
 let isChatExpanded = false;
 
-// Audio Voice Note Recording Vars
+// Voice Note Recording
 let mediaRecorder, audioChunks = [], isRecording = false;
 
-// Real-Time Live Voice Call (WebRTC) Vars
+// Real-Time Live Voice Call (WebRTC)
 let peerConnection, localStream, isCallActive = false;
 const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
-// Wheel Animation Vars
+// Wheel Animation
 let wheelAngle = 0, isWheelSpinning = false;
 
-// 2D Canvas Engine Vars
+// 2D Canvas Engine
 let canvas, ctx, animFrameId, targets = [], particles = [];
 let myScore = 0, opponentScore = 0, timeRemaining = 30;
 
+// Drawing Canvas
+let drawCanvas, drawCtx, isDrawing = false, currentColor = "#000";
+
 const rulesBook = {
-    ttt: "Tic Tac Toe:\n- Place ❌ or ⭕ turn by turn.\n- Connect 3 horizontally, vertically, or diagonally to WIN!",
+    ttt: "Tic Tac Toe:\n- Connect 3 horizontally, vertically, or diagonally to WIN!",
     rps: "Rock Paper Scissors:\n- Rock ✊ beats Scissors ✌️\n- Paper ✋ beats Rock ✊\n- Scissors ✌️ beats Paper ✋",
-    balloon: "Balloon Pop:\n- Tap rising balloons on screen to pop them.\n- Score higher than AI / Partner before time expires!",
-    hearts: "Catch Hearts:\n- Catch falling glowing hearts!\n- Hard difficulty moves targets faster.",
+    balloon: "Balloon Pop:\n- Tap rising balloons on screen to pop them.",
+    hearts: "Catch Hearts:\n- Catch falling glowing hearts!",
     coins: "Speed Coins:\n- Tap coins quickly before they vanish.",
-    td: "Truth or Dare:\n- Spin the wheel when it's your turn!\n- Complete the Truth or Dare challenge shown."
+    td: "Truth or Dare:\n- Spin the wheel when it's your turn!",
+    mystery: "Mystery Box:\n- Pick a glowing box to win coins, hats, or legendary items!",
+    whoknows: "Who Knows Better:\n- Guess each other's preferences to build match streaks!",
+    secret: "Secret Choice:\n- Choose options secretly. Same choice = Bonus Hearts!",
+    draw: "Draw & Guess:\n- Draw the given word on canvas or guess what your partner draws!",
+    redbtn: "Red Button:\n- Press the big red button to trigger wild random mini-events!",
+    quests: "Chuza Quests:\n- Complete daily tasks to earn rewards and accessories!"
 };
 
 const truthList = [
     "Aap ki sab se funny ya embarrassing memory konsi hai?",
-    "Aap ka pehla crush konsa celebrity ya banda tha?",
-    "Agar aap ko $10,000 milain to pehli cheez kya khareedoge?",
-    "Aap ki life ki sab se bari secret wish kya hai?",
-    "Kisi ke samne boht bara jhooth bola hai kabhi?"
+    "Aap ka pehla crush konsa celebrity tha?",
+    "Agar aap ko $10,000 milain to pehli cheez kya khareedoge?"
 ];
 
 const dareList = [
     "Apne room mein 10 seconds ke liye funny dance karo!",
     "Opponent ki tareef mein 3 lines bolo bina rukay!",
-    "Agley 2 minutes tak funny voice mein baat karo!",
-    "Apne phone se kisi dost ko random emoji send karo!",
-    "Apni sab se mazaqia shakal bana kar dikhao!"
+    "Agley 2 minutes tak funny voice mein baat karo!"
 ];
 
 function toggleRoomInput() {
@@ -68,6 +73,10 @@ window.addEventListener('load', () => {
     canvas = document.getElementById('gameCanvas');
     ctx = canvas.getContext('2d');
     canvas.addEventListener('pointerdown', handleCanvasClick);
+
+    drawCanvas = document.getElementById('drawCanvas');
+    drawCtx = drawCanvas.getContext('2d');
+    setupDrawingEngine();
 
     const savedSession = sessionStorage.getItem('tq_session');
     if (savedSession) {
@@ -191,6 +200,8 @@ function switchLayout(screen) {
         if (screen === 'ttt') initTTT();
         if (['balloon', 'hearts', 'coins'].includes(screen)) initGraphicsEngine(screen);
         if (screen === 'td') initTDGame();
+        if (screen === 'whoknows') initWhoKnowsGame();
+        if (screen === 'secret') initSecretGame();
     });
 }
 
@@ -224,14 +235,13 @@ function triggerGameEnd(didIWin, message) {
     modal.classList.remove('hidden');
     if (didIWin === "tie") {
         title.innerText = "IT'S A DRAW! 🤝";
-        title.className = "modal-title";
         title.style.color = "#ffeaa7";
     } else if (didIWin === true) {
         title.innerText = "VICTORY! 🎉";
-        title.className = "modal-title win-title";
+        title.style.color = "#00ffaa";
     } else {
         title.innerText = "DEFEAT! 💔";
-        title.className = "modal-title lose-title";
+        title.style.color = "#ff3366";
     }
     desc.innerText = message || "";
 }
@@ -249,20 +259,14 @@ function backToHub() {
     clearInterval(countdownTimer);
     cancelAnimationFrame(animFrameId);
 
-    if (!isSinglePlayer && roomRef) {
-        roomRef.update({ activeScreen: 'hub' });
-    } else {
-        switchLayout('hub');
-    }
+    if (!isSinglePlayer && roomRef) roomRef.update({ activeScreen: 'hub' });
+    else switchLayout('hub');
 }
 
 function exitToMainMenu() {
-    if (confirm("Kya aap Arcade Hub se bahar nikal kar Main Menu par jana chahte hain?")) {
+    if (confirm("Main Menu par jana chahte hain?")) {
         sessionStorage.removeItem('tq_session');
-
-        if (!isSinglePlayer && roomRef && playerRef) {
-            playerRef.remove();
-        }
+        if (!isSinglePlayer && roomRef && playerRef) playerRef.remove();
 
         isGameRunning = false;
         clearInterval(countdownTimer);
@@ -283,7 +287,7 @@ function showRules(type) {
 }
 function closeRules() { document.getElementById('rules-modal').classList.add('hidden'); }
 
-// ==================== [1] TIC TAC TOE ====================
+// --- [1] TIC TAC TOE ---
 function initTTT() {
     renderTTTBoard(Array(9).fill(""));
     if (!isSinglePlayer) roomRef.child('ttt').set({ board: Array(9).fill(""), turn: Object.keys(players)[0] });
@@ -301,28 +305,18 @@ function playTTT(idx) {
         if (checkTTTFull()) return triggerGameEnd("tie", "Match Tied!");
 
         document.getElementById('ttt-status').innerText = "AI thinking... 🤔";
-        const diff = document.getElementById('difficultySelect').value;
-        const delay = diff === 'easy' ? 900 : diff === 'medium' ? 600 : 350;
-
         setTimeout(() => {
             if(!isGameRunning) return;
             let emptyIdxs = [];
             cells.forEach((c, i) => { if(c.innerText === "") emptyIdxs.push(i); });
             if(emptyIdxs.length === 0) return;
-            
-            let aiPick;
-            if (diff === 'hard') {
-                const mistakeChance = Math.random() < 0.25;
-                aiPick = (!mistakeChance && (findWinningMove(cells, "⭕") ?? findWinningMove(cells, "❌"))) ?? emptyIdxs[Math.floor(Math.random() * emptyIdxs.length)];
-            } else {
-                aiPick = emptyIdxs[Math.floor(Math.random() * emptyIdxs.length)];
-            }
+            let aiPick = emptyIdxs[Math.floor(Math.random() * emptyIdxs.length)];
 
             cells[aiPick].innerText = "⭕";
             if (checkTTTLocalWin("⭕")) triggerGameEnd(false, "AI Outsmarted You!");
             else if (checkTTTFull()) triggerGameEnd("tie", "Match Tied!");
             else document.getElementById('ttt-status').innerText = "Your Turn! ⚡";
-        }, delay);
+        }, 600);
     } else {
         roomRef.child('ttt').once('value', snapshot => {
             const data = snapshot.val() || {};
@@ -334,15 +328,6 @@ function playTTT(idx) {
             roomRef.child('ttt').update({ board: b, turn: pKeys[0] === playerId ? pKeys[1] : pKeys[0] });
         });
     }
-}
-
-function findWinningMove(cells, symbol) {
-    const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-    for (let w of wins) {
-        let vals = w.map(i => cells[i].innerText);
-        if (vals.filter(v => v === symbol).length === 2 && vals.includes("")) return w[vals.indexOf("")];
-    }
-    return null;
 }
 
 function renderTTTBoard(b) {
@@ -372,7 +357,7 @@ function checkTTTFull() {
     return Array.from(document.querySelectorAll('#game-ttt .cell')).every(c => c.innerText !== "");
 }
 
-// ==================== [2] ROCK PAPER SCISSORS ====================
+// --- [2] RPS ---
 function playRPS(move) {
     if(!isGameRunning) return;
     if (isSinglePlayer) {
@@ -399,23 +384,16 @@ function checkRPSResult() {
     }
 }
 
-// ==================== [3] CANVAS GRAPHICS ENGINE ====================
+// --- [3] CANVAS ENGINE (Balloon, Hearts, Coins) ---
 function initGraphicsEngine(type) {
-    targets = []; particles = [];
-    myScore = 0; opponentScore = 0; timeRemaining = 30;
-    
+    targets = []; particles = []; myScore = 0; opponentScore = 0; timeRemaining = 30;
     document.getElementById('my-race-score').innerText = `You: ${myScore}`;
     document.getElementById('partner-race-score').innerText = isSinglePlayer ? `AI: ${opponentScore}` : "Opponent: 0";
-
-    const diff = document.getElementById('difficultySelect').value;
-    const spawnRate = diff === 'easy' ? 35 : diff === 'medium' ? 24 : 18;
-    let spawnCounter = 0;
 
     clearInterval(countdownTimer);
     countdownTimer = setInterval(() => {
         timeRemaining--;
         document.getElementById('race-timer').innerText = `${timeRemaining}s`;
-
         if (timeRemaining <= 0) {
             let winStatus = myScore > opponentScore ? true : myScore < opponentScore ? false : "tie";
             triggerGameEnd(winStatus, `Final Score - You: ${myScore} | Opponent: ${opponentScore}`);
@@ -426,66 +404,27 @@ function initGraphicsEngine(type) {
         if (!isGameRunning) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        spawnCounter++;
-        if (spawnCounter % spawnRate === 0) {
-            spawnTarget(type, diff);
-        }
-
-        let aiHitChance = diff === 'easy' ? 0.012 : diff === 'medium' ? 0.022 : 0.032;
-        if (isSinglePlayer && Math.random() < aiHitChance) {
-            if (targets.length > 0) {
-                let aiIdx = Math.floor(Math.random() * targets.length);
-                let t = targets[aiIdx];
-                createVFX(t.x, t.y, '#ff4757');
-                targets.splice(aiIdx, 1);
-                opponentScore++;
-                document.getElementById('partner-race-score').innerText = `AI: ${opponentScore}`;
-            }
-        }
+        if (Math.random() < 0.05) spawnTarget(type);
 
         for (let i = targets.length - 1; i >= 0; i--) {
             let t = targets[i];
             t.y += t.vy;
-            
-            ctx.save();
-            ctx.shadowColor = t.glow;
-            ctx.shadowBlur = 12;
             ctx.font = `${t.size}px Arial`;
             ctx.fillText(t.symbol, t.x - t.size/2, t.y + t.size/2);
-            ctx.restore();
-
             if (t.y < -40 || t.y > canvas.height + 40) targets.splice(i, 1);
         }
-
-        for (let i = particles.length - 1; i >= 0; i--) {
-            let p = particles[i];
-            p.x += p.vx; p.y += p.vy; p.alpha -= 0.04;
-            ctx.fillStyle = p.color;
-            ctx.globalAlpha = Math.max(0, p.alpha);
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fill();
-            if (p.alpha <= 0) particles.splice(i, 1);
-        }
-        ctx.globalAlpha = 1.0;
-
         animFrameId = requestAnimationFrame(gameLoop);
     }
     gameLoop();
 }
 
-function spawnTarget(type, diff) {
-    let speedMult = diff === 'easy' ? 1 : diff === 'medium' ? 1.6 : 2.2;
+function spawnTarget(type) {
     let symbol = type === 'balloon' ? '🎈' : type === 'hearts' ? '❤️' : '🪙';
-    let glow = type === 'balloon' ? '#ff3366' : type === 'hearts' ? '#ff4757' : '#ffd700';
-
     targets.push({
         x: Math.random() * (canvas.width - 60) + 30,
         y: type === 'balloon' ? canvas.height + 30 : -20,
-        vy: type === 'balloon' ? -speedMult * (1.3 + Math.random()) : speedMult * (1.3 + Math.random()),
-        size: 36,
-        symbol: symbol,
-        glow: glow
+        vy: type === 'balloon' ? -2 : 2,
+        size: 36, symbol: symbol
     });
 }
 
@@ -497,28 +436,12 @@ function handleCanvasClick(e) {
 
     for (let i = targets.length - 1; i >= 0; i--) {
         let t = targets[i];
-        let dist = Math.hypot(clickX - t.x, clickY - (t.y + 5));
-        if (dist < t.size) {
-            createVFX(t.x, t.y, t.glow);
+        if (Math.hypot(clickX - t.x, clickY - t.y) < t.size) {
             targets.splice(i, 1);
             myScore++;
             document.getElementById('my-race-score').innerText = `You: ${myScore}`;
-            if (!isSinglePlayer) playerRef.child('score').set(myScore);
             break;
         }
-    }
-}
-
-function createVFX(x, y, color) {
-    for (let i = 0; i < 12; i++) {
-        particles.push({
-            x: x, y: y,
-            vx: (Math.random() - 0.5) * 6,
-            vy: (Math.random() - 0.5) * 6,
-            size: Math.random() * 4 + 2,
-            color: color,
-            alpha: 1.0
-        });
     }
 }
 
@@ -529,55 +452,105 @@ function updateRaceScoreboard() {
     document.getElementById('partner-race-score').innerText = `${players[partnerId]?.name || 'Partner'}: ${players[partnerId]?.score || 0}`;
 }
 
-// ==================== [4] ROTATING WHEEL TRUTH OR DARE ====================
+// --- [4] TRUTH OR DARE ---
 function initTDGame() {
     document.getElementById('td-display-card').innerText = 'Tap "SPIN WHEEL 🎡" to select a challenge!';
-    document.getElementById('spinWheelBtn').disabled = false;
-    document.getElementById('td-turn-status').innerText = "Your Turn to Spin!";
 }
-
 function spinTDWheel() {
     if (isWheelSpinning) return;
     isWheelSpinning = true;
-
-    const btn = document.getElementById('spinWheelBtn');
-    btn.disabled = true;
-    document.getElementById('td-display-card').innerText = "Wheel is spinning... 🌀";
-
-    const randomTurns = 360 * (5 + Math.floor(Math.random() * 5));
-    const randomDegree = Math.floor(Math.random() * 360);
-    wheelAngle += randomTurns + randomDegree;
-
-    const wheel = document.getElementById('wheelCircle');
-    wheel.style.transform = `rotate(${wheelAngle}deg)`;
+    wheelAngle += 360 * 4 + Math.floor(Math.random() * 360);
+    document.getElementById('wheelCircle').style.transform = `rotate(${wheelAngle}deg)`;
 
     setTimeout(() => {
         isWheelSpinning = false;
-        btn.disabled = false;
-
-        const actualDeg = wheelAngle % 360;
-        const choice = (actualDeg >= 0 && actualDeg < 90) || (actualDeg >= 180 && actualDeg < 270) ? 'truth' : 'dare';
-
-        const arr = choice === 'truth' ? truthList : dareList;
-        const resultText = arr[Math.floor(Math.random() * arr.length)];
-
-        document.getElementById('td-display-card').innerText = `${choice.toUpperCase()}: "${resultText}"`;
-
-        if (isSinglePlayer) {
-            document.getElementById('td-turn-status').innerText = "Challenge Selected! Complete it 🎯";
-        }
+        const choices = [...truthList, ...dareList];
+        document.getElementById('td-display-card').innerText = choices[Math.floor(Math.random() * choices.length)];
     }, 3000);
 }
 
-// ==================== [5] ADVANCED CHAT, VOICE NOTES & IMAGE SUITE ====================
+// --- [5] MYSTERY BOX ---
+function openMysteryBox(idx) {
+    const rewards = ["🪙 100 Coins!", "👒 Golden Crown!", "🧩 Legendary Puzzle Piece!", "🐥 Chuza Pet Item!", "⭐ Lucky Star Badge!", "🎨 Rainbow Brush!"];
+    const prize = rewards[Math.floor(Math.random() * rewards.length)];
+    document.getElementById('mystery-result').innerHTML = `<b>Box #${idx+1} Opened:</b><br/>You won ${prize}`;
+}
+
+// --- [6] WHO KNOWS BETTER ---
+function initWhoKnowsGame() {
+    const qList = [
+        { q: "Favorite Beverage?", opts: ["☕ Tea", "🥤 Coffee"] },
+        { q: "Ideal Vacation?", opts: ["🏖️ Beach", "🏔️ Mountains"] },
+        { q: "Pet Choice?", opts: ["🐱 Cat", "🐶 Dog"] }
+    ];
+    const picked = qList[Math.floor(Math.random() * qList.length)];
+    document.getElementById('wk-question').innerText = picked.q;
+    const box = document.getElementById('wk-options');
+    box.innerHTML = "";
+    picked.opts.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.innerText = opt;
+        btn.onclick = () => { document.getElementById('wk-result').innerText = `Aap ne pick kiya: ${opt}! Checking Partner Match... ✅`; };
+        box.appendChild(btn);
+    });
+}
+
+// --- [7] SECRET CHOICE ---
+function initSecretGame() {
+    const choices = [["🍕 Pizza", "🍔 Burger"], ["🌅 Sunrise", "🌙 Night"], ["🐱 Cat", "🐶 Dog"]];
+    const pair = choices[Math.floor(Math.random() * choices.length)];
+    const box = document.getElementById('secret-options');
+    box.innerHTML = "";
+    pair.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'choice-card';
+        div.innerText = item;
+        div.onclick = () => { document.getElementById('secret-result').innerText = `Choice Locked: ${item}! 🔒 Hearts Multiplier Active! ❤️`; };
+        box.appendChild(div);
+    });
+}
+
+// --- [8] DRAW & GUESS ENGINE ---
+function setupDrawingEngine() {
+    let painting = false;
+    drawCanvas.addEventListener('mousedown', () => painting = true);
+    drawCanvas.addEventListener('mouseup', () => { painting = false; drawCtx.beginPath(); });
+    drawCanvas.addEventListener('mousemove', (e) => {
+        if (!painting) return;
+        const rect = drawCanvas.getBoundingClientRect();
+        drawCtx.lineWidth = 4;
+        drawCtx.lineCap = 'round';
+        drawCtx.strokeStyle = currentColor;
+        drawCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+        drawCtx.stroke();
+        drawCtx.beginPath();
+        drawCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    });
+}
+function setDrawColor(c) { currentColor = c; }
+function clearDrawCanvas() { drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height); }
+
+// --- [9] RED BUTTON CHAOS ---
+function pressRedButton() {
+    const events = ["🎈 Balloon Rain Event!", "🧩 30-Second Puzzle Sprint!", "🪙 Gold Coin Shower!", "🦋 Butterfly Catching!", "🌈 Rainbow Sky Bonus!"];
+    const picked = events[Math.floor(Math.random() * events.length)];
+    document.getElementById('redbtn-event').innerText = `CHAOS EVENT TRIGGERED:\n${picked}`;
+}
+
+// --- [10] CHUZA DAILY QUESTS ---
+function claimQuest(btn) {
+    btn.innerText = "Completed ✅";
+    btn.disabled = true;
+    btn.style.background = "#00b894";
+}
+
+// --- [11] CHAT, VOICE NOTES & LIVE CALL ---
 function toggleVoiceRecording() {
     const micBtn = document.getElementById('micBtn');
-
     if (!isRecording) {
         navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
             mediaRecorder = new MediaRecorder(stream);
             audioChunks = [];
-
             mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
             mediaRecorder.onstop = () => {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
@@ -585,27 +558,20 @@ function toggleVoiceRecording() {
                 reader.readAsDataURL(audioBlob);
                 reader.onloadend = () => {
                     const base64Audio = reader.result;
-                    if (isSinglePlayer) {
-                        appendChatMessage(myName, "", base64Audio, null);
-                        triggerAIVoiceReply();
-                    } else {
-                        chatRef.push({ sender: myName, text: "", audio: base64Audio, image: null });
-                    }
+                    if (isSinglePlayer) appendChatMessage(myName, "", base64Audio, null);
+                    else chatRef.push({ sender: myName, text: "", audio: base64Audio, image: null });
                 };
                 stream.getTracks().forEach(track => track.stop());
             };
-
             mediaRecorder.start();
             isRecording = true;
-            micBtn.classList.add('recording');
-            micBtn.innerText = "🛑";
-        }).catch(() => alert("Microphone Permission Required!"));
+            micBtn.classList.add('recording'); micBtn.innerText = "🛑";
+        }).catch(() => alert("Mic permission required!"));
     } else {
         if (mediaRecorder && isRecording) {
             mediaRecorder.stop();
             isRecording = false;
-            micBtn.classList.remove('recording');
-            micBtn.innerText = "🎙️";
+            micBtn.classList.remove('recording'); micBtn.innerText = "🎙️";
         }
     }
 }
@@ -613,16 +579,11 @@ function toggleVoiceRecording() {
 function handleImageSelected(event) {
     const file = event.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (e) => {
         const base64Img = e.target.result;
-        if (isSinglePlayer) {
-            appendChatMessage(myName, "", null, base64Img);
-            setTimeout(() => appendChatMessage("Smart AI 🤖", "Awesome picture! 📸"), 1000);
-        } else {
-            chatRef.push({ sender: myName, text: "", audio: null, image: base64Img });
-        }
+        if (isSinglePlayer) appendChatMessage(myName, "", null, base64Img);
+        else chatRef.push({ sender: myName, text: "", audio: null, image: base64Img });
     };
     reader.readAsDataURL(file);
 }
@@ -635,17 +596,7 @@ function sendChatMessage() {
     if (isSinglePlayer) {
         appendChatMessage(myName, txt, null, null);
         input.value = "";
-        
-        setTimeout(() => {
-            const aiReplies = ["Good move! 🎮", "Haha sahi keh rahe ho! 😂", "Main jeet ke rahunga! 🔥", "Zabardast! ✨"];
-            const replyText = aiReplies[Math.floor(Math.random() * aiReplies.length)];
-            appendChatMessage("Smart AI 🤖", replyText, null, null);
-            
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(replyText);
-                window.speechSynthesis.speak(utterance);
-            }
-        }, 1000);
+        setTimeout(() => appendChatMessage("Smart AI 🤖", "Maza aa raha hai! 🔥"), 1000);
     } else {
         chatRef.push({ sender: myName, text: txt, audio: null, image: null });
         input.value = "";
@@ -660,7 +611,7 @@ function appendChatMessage(sender, text, audioUrl, imageUrl) {
     let content = `<b>${sender}:</b> `;
     if (text) content += text;
     if (audioUrl) content += `<br/><audio controls src="${audioUrl}"></audio>`;
-    if (imageUrl) content += `<br/><img src="${imageUrl}" class="chat-img" onclick="window.open(this.src)"/>`;
+    if (imageUrl) content += `<br/><img src="${imageUrl}" class="chat-img"/>`;
 
     div.innerHTML = content;
     box.appendChild(div);
@@ -668,13 +619,9 @@ function appendChatMessage(sender, text, audioUrl, imageUrl) {
 }
 
 function clearChatMessages() {
-    if (confirm("Kya aap saari chat history delete karna chahte hain?")) {
-        if (isSinglePlayer) {
-            const box = document.getElementById('chat-messages');
-            box.innerHTML = `<div class="chat-msg"><b>System:</b> Chat cleared!</div>`;
-        } else if (chatRef) {
-            chatRef.remove();
-        }
+    if (confirm("Clear chat history?")) {
+        if (isSinglePlayer) document.getElementById('chat-messages').innerHTML = `<div class="chat-msg"><b>System:</b> Chat cleared!</div>`;
+        else if (chatRef) chatRef.remove();
     }
 }
 
@@ -685,47 +632,21 @@ function toggleChatExpand() {
     else body.classList.add('hidden');
 }
 
-function triggerAIVoiceReply() {
-    setTimeout(() => {
-        const replies = [
-            "Wah! Aap ki voice note boht zabardast hai! 🎮",
-            "Main aap ka voice note sun chuka hoon, game par dhyan do! 🔥",
-            "Aap ki baatein sun kar maza aya, chalo ab kheleim! 😂"
-        ];
-        const textReply = replies[Math.floor(Math.random() * replies.length)];
-        appendChatMessage("Smart AI 🤖", textReply, null, null);
-
-        if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(textReply);
-            window.speechSynthesis.speak(utterance);
-        }
-    }, 1200);
-}
-
-// ==================== [6] REAL-TIME LIVE VOICE CALL ENGINE (WEBRTC) ====================
+// Live Call WebRTC
 function toggleLiveVoiceCall() {
-    if (isSinglePlayer) {
-        alert("Live Voice Call is available in Multiplayer Mode!");
-        return;
-    }
-
+    if (isSinglePlayer) return alert("Call available in Multiplayer Mode!");
     const btn = document.getElementById('liveCallBtn');
-
     if (!isCallActive) {
-        navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(stream => {
-            localStream = stream;
-            isCallActive = true;
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            localStream = stream; isCallActive = true;
             btn.classList.add('call-active');
-            btn.title = "End Voice Call";
-            
             initPeerConnection();
             localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
             peerConnection.createOffer().then(offer => {
                 peerConnection.setLocalDescription(offer);
                 callRef.child(playerId).set({ type: 'offer', sdp: offer.sdp });
             });
-        }).catch(() => alert("Microphone access required for Live Call!"));
+        });
     } else {
         stopLiveVoiceCall();
     }
@@ -735,43 +656,21 @@ function stopLiveVoiceCall() {
     if (peerConnection) peerConnection.close();
     if (localStream) localStream.getTracks().forEach(track => track.stop());
     isCallActive = false;
-    
-    const btn = document.getElementById('liveCallBtn');
-    if(btn) {
-        btn.classList.remove('call-active');
-        btn.title = "Toggle Live Voice Call";
-    }
+    document.getElementById('liveCallBtn').classList.remove('call-active');
 }
 
 function initPeerConnection() {
     peerConnection = new RTCPeerConnection(rtcConfig);
-
-    peerConnection.ontrack = (event) => {
-        const remoteAudio = document.getElementById('remoteAudioPlayer');
-        if (remoteAudio.srcObject !== event.streams[0]) {
-            remoteAudio.srcObject = event.streams[0];
-        }
-    };
-
-    peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-            callRef.child(playerId + '_candidate').push(event.candidate.toJSON());
-        }
-    };
+    peerConnection.ontrack = (e) => { document.getElementById('remoteAudioPlayer').srcObject = e.streams[0]; };
 }
 
 function setupCallSignaling() {
     callRef.on('child_added', snapshot => {
-        const key = snapshot.key;
-        const data = snapshot.val();
-
-        if (key.startsWith(playerId)) return; // Ignore own signals
-
+        const key = snapshot.key, data = snapshot.val();
+        if (key.startsWith(playerId)) return;
         if (data.type === 'offer' && isCallActive) {
             initPeerConnection();
-            if (localStream) {
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-            }
+            if (localStream) localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
             peerConnection.setRemoteDescription(new RTCSessionDescription(data));
             peerConnection.createAnswer().then(answer => {
                 peerConnection.setLocalDescription(answer);
