@@ -197,10 +197,38 @@ function requestReplay() {
 }
 
 function backToHub() {
-    sessionStorage.removeItem('tq_session');
     document.getElementById('result-modal').classList.add('hidden');
-    if (!isSinglePlayer && roomRef) roomRef.update({ activeScreen: 'hub' });
-    else switchLayout('hub');
+    document.getElementById('rules-modal').classList.add('hidden');
+    
+    isGameRunning = false;
+    clearInterval(countdownTimer);
+    cancelAnimationFrame(animFrameId);
+
+    if (!isSinglePlayer && roomRef) {
+        roomRef.update({ activeScreen: 'hub' });
+    } else {
+        switchLayout('hub');
+    }
+}
+
+function exitToMainMenu() {
+    if (confirm("Kya aap Arcade Hub se bahar nikal kar Main Menu par jana chahte hain?")) {
+        sessionStorage.removeItem('tq_session');
+
+        if (!isSinglePlayer && roomRef && playerRef) {
+            playerRef.remove();
+        }
+
+        isGameRunning = false;
+        clearInterval(countdownTimer);
+        cancelAnimationFrame(animFrameId);
+
+        document.getElementById('result-modal').classList.add('hidden');
+        document.getElementById('rules-modal').classList.add('hidden');
+
+        document.querySelectorAll('.container').forEach(c => c.classList.add('hidden'));
+        document.getElementById('lobby-screen').classList.remove('hidden');
+    }
 }
 
 function showRules(type) {
@@ -346,13 +374,11 @@ function initGraphicsEngine(type) {
         if (!isGameRunning) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Spawn logic
         spawnCounter++;
         if (spawnCounter % spawnRate === 0) {
             spawnTarget(type, diff);
         }
 
-        // Single Player AI Auto Hit
         if (isSinglePlayer && Math.random() < (diff === 'easy' ? 0.02 : diff === 'medium' ? 0.04 : 0.08)) {
             if (targets.length > 0) {
                 let aiIdx = Math.floor(Math.random() * targets.length);
@@ -364,12 +390,10 @@ function initGraphicsEngine(type) {
             }
         }
 
-        // Update & Render Targets
         for (let i = targets.length - 1; i >= 0; i--) {
             let t = targets[i];
             t.y += t.vy;
             
-            // Draw Target Graphics
             ctx.save();
             ctx.shadowColor = t.glow;
             ctx.shadowBlur = 12;
@@ -380,7 +404,6 @@ function initGraphicsEngine(type) {
             if (t.y < -40 || t.y > canvas.height + 40) targets.splice(i, 1);
         }
 
-        // Render VFX Explosions
         for (let i = particles.length - 1; i >= 0; i--) {
             let p = particles[i];
             p.x += p.vx; p.y += p.vy; p.alpha -= 0.04;

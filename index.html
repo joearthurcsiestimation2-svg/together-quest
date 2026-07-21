@@ -157,8 +157,14 @@
 
     <!-- Arcade Hub -->
     <div id="hub-screen" class="container hidden">
-        <h2 id="welcome-msg">Arcade Hub</h2>
-        <div style="font-size:13px; color:var(--accent);" id="hub-status">Engine Ready</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <span style="font-size: 13px; color: var(--accent); font-weight: bold;" id="hub-status">Engine Ready</span>
+            <button onclick="exitToMainMenu()" style="width: auto; padding: 6px 14px; margin: 0; font-size: 12px; background: rgba(255,51,102,0.2); border: 1px solid var(--primary); color: #fff;">
+                🏠 Main Menu
+            </button>
+        </div>
+
+        <h2 id="welcome-msg" style="margin-top: 5px;">Arcade Hub</h2>
 
         <div style="margin:16px 0 6px 0; text-align:left;">
             <label style="font-size:12px; color:#8085a0; font-weight:600;">AI DIFFICULTY LEVEL:</label>
