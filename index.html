@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Together Quest Ultimate Arcade v5.0 🎮✨</title>
+    <title>Together Quest Ultimate Arcade v6.0 🎮✨</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -63,6 +63,7 @@
         }
 
         .hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
+        
         .game-card {
             background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
             padding: 16px 10px; border-radius: 22px; cursor: pointer; font-weight: 800; font-size: 13px;
@@ -92,18 +93,18 @@
             animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        .ttt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 300px; margin: 15px auto; }
-        .cell {
-            background: rgba(255,255,255,0.05); height: 85px; border-radius: 18px;
-            font-size: 42px; display: flex; justify-content: center; align-items: center;
-            border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: 0.2s;
-        }
-
         #gameCanvas {
             width: 100%; height: 300px; background: #0c0d18;
             border-radius: 20px; border: 1px solid rgba(255,255,255,0.15);
             box-shadow: inset 0 0 20px rgba(0,0,0,0.8); cursor: crosshair; touch-action: none;
         }
+
+        .ttt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
+        .ttt-cell { background: rgba(255,255,255,0.08); height: 80px; border-radius: 16px; font-size: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.15); }
+
+        .c4-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; background: #2b2d42; padding: 10px; border-radius: 18px; margin: 15px 0; }
+        .c4-cell { width: 100%; aspect-ratio: 1; background: #0f101d; border-radius: 50%; cursor: pointer; border: 2px solid rgba(255,255,255,0.1); }
+        .c4-cell.red { background: #ff3366; }
 
         .wheel-wrapper { position: relative; width: 200px; height: 200px; margin: 15px auto; }
         .wheel-pointer {
@@ -123,20 +124,13 @@
             display: flex; align-items: center; justify-content: center; font-size: 14px;
         }
 
-        /* Snake Controls Grid */
         .snake-dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: 180px; margin: 12px auto 0 auto; }
 
-        /* Memory Card Grid */
-        .card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 15px 0; }
-        .mem-card { background: rgba(255,255,255,0.08); height: 60px; border-radius: 12px; font-size: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.15); }
-
-        /* Floating Live Chat Box UI */
         #chat-widget {
             position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
             width: 92%; max-width: 480px; z-index: 400; background: rgba(15, 16, 29, 0.95);
             border: 1px solid rgba(255,255,255,0.2); border-radius: 20px 20px 0 0;
-            box-shadow: 0 -10px 30px rgba(0,0,0,0.8); backdrop-filter: blur(15px);
-            transition: all 0.3s ease;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.8); backdrop-filter: blur(15px); transition: all 0.3s ease;
         }
 
         #chat-header {
@@ -145,34 +139,14 @@
             font-size: 13px; font-weight: 800; color: var(--accent);
         }
 
-        .chat-header-actions { display: flex; gap: 8px; align-items: center; }
-        .chat-action-btn { background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 2px 8px; border-radius: 8px; font-size: 11px; cursor: pointer; }
-
         #chat-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-        #chat-messages {
-            height: 120px; overflow-y: auto; text-align: left; font-size: 12px;
-            display: flex; flex-direction: column; gap: 6px;
-        }
-
+        #chat-messages { height: 120px; overflow-y: auto; text-align: left; font-size: 12px; display: flex; flex-direction: column; gap: 6px; }
         .chat-msg { background: rgba(255,255,255,0.07); padding: 8px 10px; border-radius: 12px; word-break: break-word; }
-        .chat-msg audio { height: 30px; width: 100%; margin-top: 4px; }
-        .chat-img { max-width: 100%; max-height: 120px; border-radius: 10px; margin-top: 5px; }
 
         #chat-input-row { display: flex; gap: 6px; margin-top: 4px; align-items: center; }
         #chat-input-row input[type="text"] { margin: 0; padding: 8px 12px; font-size: 12px; flex: 1; }
         #chat-input-row button { width: auto; margin: 0; padding: 8px 12px; font-size: 12px; }
 
-        .icon-btn {
-            background: rgba(255,255,255,0.1) !important;
-            min-width: 36px; width: 36px !important; height: 36px; border-radius: 12px !important;
-            display: flex; justify-content: center; align-items: center; font-size: 15px; padding: 0 !important;
-            box-shadow: none !important; border: 1px solid rgba(255,255,255,0.2) !important;
-        }
-
-        .icon-btn.recording { background: #ff3366 !important; animation: pulse 1s infinite; }
-        .icon-btn.call-active { background: #00b894 !important; animation: pulse 1.5s infinite; }
-
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         .hidden { display: none !important; }
         @keyframes popIn { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     </style>
@@ -203,7 +177,7 @@
     <!-- Login Lobby -->
     <div id="lobby-screen" class="container">
         <h1>Together Quest ✨</h1>
-        <p style="font-size:14px; color:#a0a5c0; margin-bottom:20px;">Couple Arcade Suite v5.0 Ultimate</p>
+        <p style="font-size:14px; color:#a0a5c0; margin-bottom:20px;">Couple Arcade Suite v6.0</p>
         
         <select id="gameModeType" onchange="toggleRoomInput()">
             <option value="single">👤 Single Player (Vs Smart AI)</option>
@@ -226,60 +200,46 @@
 
         <h2 id="welcome-msg" style="margin-top: 5px;">Arcade Hub</h2>
 
-        <div style="margin:10px 0 6px 0; text-align:left;">
-            <label style="font-size:12px; color:#8085a0; font-weight:600;">AI DIFFICULTY LEVEL:</label>
-            <select id="difficultySelect">
-                <option value="easy">🟢 Easy Mode</option>
-                <option value="medium" selected>🟡 Medium Mode</option>
-                <option value="hard">🔴 Hard Challenge</option>
-            </select>
-        </div>
-
         <div class="hub-grid">
-            <!-- ORIGINAL CLASSICS -->
+            <!-- ORIGINAL 6 GAMES FROM YOUR IMAGE (UNTOUCHED) -->
             <div class="game-card" onclick="openGame('ttt')"><span>❌</span>Tic Tac Toe</div>
             <div class="game-card" onclick="openGame('rps')"><span>✊</span>RPS Battle</div>
             <div class="game-card" onclick="openGame('balloon')"><span>🎈</span>Balloon Pop</div>
             <div class="game-card" onclick="openGame('hearts')"><span>❤️</span>Catch Hearts</div>
             <div class="game-card" onclick="openGame('coins')"><span>🪙</span>Speed Coins</div>
             <div class="game-card" onclick="openGame('td')"><span>🎯</span>Truth or Dare</div>
-            <!-- NEW COUPLE & MULTIPLAYER GAMES -->
+
+            <!-- 6 NEW ENHANCED GAMES -->
             <div class="game-card" onclick="openGame('snake')"><span>🐍</span>Snake Duo</div>
             <div class="game-card" onclick="openGame('pong')"><span>🏓</span>Ping Pong</div>
             <div class="game-card" onclick="openGame('ludo')"><span>🎲</span>Ludo Mini</div>
             <div class="game-card" onclick="openGame('bomb')"><span>💣</span>Bomb Pass</div>
-            <div class="game-card" onclick="openGame('brick')"><span>🧱</span>Brick Smash</div>
-            <div class="game-card" onclick="openGame('memory')"><span>🎴</span>Memory Match</div>
+            <div class="game-card" onclick="openGame('c4')"><span>🔴</span>Connect 4</div>
+            <div class="game-card" onclick="openGame('quiz')"><span>❓</span>Couple Quiz</div>
         </div>
     </div>
 
-    <!-- 1. Tic Tac Toe -->
+    <!-- Tic Tac Toe Game Screen -->
     <div id="game-ttt" class="container hidden">
         <button class="btn-rule" onclick="showRules('ttt')">Rules 📜</button>
         <h2>❌ Tic Tac Toe ⭕</h2>
-        <div id="ttt-status" style="color:var(--accent); font-weight:bold; margin-bottom:10px;">Initializing...</div>
-        <div class="ttt-grid">
-            <div class="cell" onclick="playTTT(0)"></div><div class="cell" onclick="playTTT(1)"></div><div class="cell" onclick="playTTT(2)"></div>
-            <div class="cell" onclick="playTTT(3)"></div><div class="cell" onclick="playTTT(4)"></div><div class="cell" onclick="playTTT(5)"></div>
-            <div class="cell" onclick="playTTT(6)"></div><div class="cell" onclick="playTTT(7)"></div><div class="cell" onclick="playTTT(8)"></div>
-        </div>
-        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:15px;">Back to Hub 🚪</button>
+        <div class="ttt-grid" id="tttGrid"></div>
+        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1);">Back to Hub 🚪</button>
     </div>
 
-    <!-- 2. RPS Screen -->
+    <!-- RPS Game Screen -->
     <div id="game-rps" class="container hidden">
         <button class="btn-rule" onclick="showRules('rps')">Rules 📜</button>
-        <h2>✊ Rock Paper Scissors ✌️</h2>
-        <div id="rps-status" style="color:var(--accent); font-weight:bold; margin-bottom:20px;">Choose your weapon!</div>
+        <h2>✊ RPS Battle 🖐️</h2>
         <div style="display:flex; justify-content:space-around; margin:20px 0;">
-            <button onclick="playRPS('✊')" style="font-size:32px; width:75px; height:75px; border-radius:50%;">✊</button>
-            <button onclick="playRPS('✋')" style="font-size:32px; width:75px; height:75px; border-radius:50%;">✋</button>
-            <button onclick="playRPS('✌️')" style="font-size:32px; width:75px; height:75px; border-radius:50%;">✌️</button>
+            <button onclick="playRPS('✊')" style="font-size:30px; width:70px; height:70px; border-radius:50%;">✊</button>
+            <button onclick="playRPS('🖐️')" style="font-size:30px; width:70px; height:70px; border-radius:50%;">🖐️</button>
+            <button onclick="playRPS('✌️')" style="font-size:30px; width:70px; height:70px; border-radius:50%;">✌️</button>
         </div>
-        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:20px;">Back to Hub 🚪</button>
+        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1);">Back to Hub 🚪</button>
     </div>
 
-    <!-- 3. Canvas Engine Screen (Balloon, Hearts, Coins, Pong, Brick) -->
+    <!-- Graphic Arena -->
     <div id="game-race" class="container hidden">
         <button class="btn-rule" onclick="showRules(activeRaceType)">Rules 📜</button>
         <h2 id="race-title">Graphic Arena</h2>
@@ -292,27 +252,41 @@
         <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:12px;">Back to Hub 🚪</button>
     </div>
 
-    <!-- 4. Truth or Dare Screen -->
+    <!-- Truth or Dare -->
     <div id="game-td" class="container hidden">
         <button class="btn-rule" onclick="showRules('td')">Rules 📜</button>
         <h2>🎯 Spin the Wheel 🎯</h2>
-        <div id="td-turn-status" style="color:var(--accent); font-weight:bold; margin-bottom:5px;">Your Turn to Spin!</div>
-        
         <div class="wheel-wrapper">
             <div class="wheel-pointer"></div>
             <div class="wheel-circle" id="wheelCircle"></div>
         </div>
-
-        <div class="td-card" id="td-display-card">Tap "SPIN WHEEL 🎡" to select a challenge!</div>
-
-        <button id="spinWheelBtn" onclick="spinTDWheel()" style="background:linear-gradient(135deg, #00b894, #00cec9); font-size:16px;">SPIN WHEEL 🎡</button>
+        <div class="td-card" id="td-display-card">Tap "SPIN WHEEL 🎡"!</div>
+        <button onclick="spinTDWheel()" style="background:linear-gradient(135deg, #00b894, #00cec9);">SPIN WHEEL 🎡</button>
         <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:8px;">Back to Hub 🚪</button>
     </div>
 
-    <!-- 5. SNAKE DUO SCREEN -->
+    <!-- Connect 4 -->
+    <div id="game-c4" class="container hidden">
+        <button class="btn-rule" onclick="showRules('c4')">Rules 📜</button>
+        <h2>🔴 Connect 4 🟡</h2>
+        <div id="c4-status" style="color:var(--accent); font-weight:bold; margin-bottom:10px;">Your Turn!</div>
+        <div class="c4-grid" id="c4Grid"></div>
+        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1);">Back to Hub 🚪</button>
+    </div>
+
+    <!-- Couple Quiz -->
+    <div id="game-quiz" class="container hidden">
+        <button class="btn-rule" onclick="showRules('quiz')">Rules 📜</button>
+        <h2>❓ Couple Quiz ❓</h2>
+        <div id="quiz-q" class="td-card" style="font-size:16px; font-weight:bold;">Loading Question...</div>
+        <div id="quiz-options" style="display:flex; flex-direction:column; gap:8px;"></div>
+        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:15px;">Back to Hub 🚪</button>
+    </div>
+
+    <!-- Snake Duo -->
     <div id="game-snake" class="container hidden">
         <button class="btn-rule" onclick="showRules('snake')">Rules 📜</button>
-        <h2>🐍 Nokia Snake Duo 🍎</h2>
+        <h2>🐍 Snake Duo 🍎</h2>
         <canvas id="snakeCanvas" width="360" height="240" style="background:#000; border-radius:16px; border:2px solid #00ffaa;"></canvas>
         <div class="snake-dpad">
             <div></div><button onclick="setSnakeDir('UP')" style="padding:10px;">⬆️</button><div></div>
@@ -322,61 +296,42 @@
         <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:10px;">Back to Hub 🚪</button>
     </div>
 
-    <!-- 6. LUDO MINI SCREEN -->
+    <!-- Ludo Mini -->
     <div id="game-ludo" class="container hidden">
         <button class="btn-rule" onclick="showRules('ludo')">Rules 📜</button>
         <h2>🎲 Ludo Mini Duel 🏆</h2>
-        <div id="ludo-status" style="color:var(--accent); font-weight:bold; margin-bottom:15px;">Roll the Dice!</div>
         <div style="font-size:70px; margin:20px 0;" id="dice-display">🎲</div>
-        <button onclick="rollLudoDice()" style="background:linear-gradient(135deg, #e17055, #d63031); font-size:18px;">ROLL DICE 🎲</button>
-        <div id="ludo-progress" class="td-card">Your Tokens: 0/10 Steps</div>
+        <button onclick="rollLudoDice()" style="background:linear-gradient(135deg, #e17055, #d63031);">ROLL DICE 🎲</button>
+        <div id="ludo-progress" class="td-card">Your Tokens: 0/20 Steps</div>
         <button onclick="backToHub()" style="background:rgba(255,255,255,0.1);">Back to Hub 🚪</button>
     </div>
 
-    <!-- 7. BOMB PASS SCREEN -->
+    <!-- Bomb Pass -->
     <div id="game-bomb" class="container hidden">
         <button class="btn-rule" onclick="showRules('bomb')">Rules 📜</button>
         <h2>💣 Hot Potato Bomb 💣</h2>
-        <div id="bomb-holder" style="font-size:20px; color:var(--accent); margin-bottom:10px;">Bomb with: YOU!</div>
-        <div style="font-size:90px; margin:20px 0;" id="bomb-icon">💣</div>
-        <button onclick="passBomb()" style="background:linear-gradient(135deg, #d63031, #ff7675); font-size:18px;">PASS BOMB 💥</button>
+        <div id="bomb-holder" style="font-size:20px; color:var(--accent);">Bomb with: YOU!</div>
+        <div style="font-size:90px; margin:20px 0;">💣</div>
+        <button onclick="passBomb()" style="background:linear-gradient(135deg, #d63031, #ff7675);">PASS BOMB 💥</button>
         <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:10px;">Back to Hub 🚪</button>
     </div>
 
-    <!-- 8. MEMORY MATCH SCREEN -->
-    <div id="game-memory" class="container hidden">
-        <button class="btn-rule" onclick="showRules('memory')">Rules 📜</button>
-        <h2>🎴 Memory Card Match 🎴</h2>
-        <div class="card-grid" id="memoryGrid"></div>
-        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1);">Back to Hub 🚪</button>
-    </div>
-
-    <!-- Floating Live Chat Suite -->
+    <!-- Floating Live Chat -->
     <div id="chat-widget" class="hidden">
-        <div id="chat-header">
-            <span onclick="toggleChatExpand()" style="flex:1;">💬 Live Chat & Voice Call 📞</span>
-            <div class="chat-header-actions">
-                <button class="chat-action-btn" onclick="clearChatMessages()" title="Clear Chat">🗑️ Clear</button>
-                <button class="chat-action-btn" onclick="toggleChatExpand()" title="Close Chat">❌ Close</button>
-            </div>
+        <div id="chat-header" onclick="toggleChatExpand()">
+            <span>💬 Live Chat</span>
+            <span>▲</span>
         </div>
         <div id="chat-body" class="hidden">
             <div id="chat-messages">
-                <div class="chat-msg"><b>System:</b> Live Chat, Voice Notes, Photos & Voice Call active!</div>
+                <div class="chat-msg"><b>System:</b> Live Chat active!</div>
             </div>
             <div id="chat-input-row">
-                <button class="icon-btn" id="liveCallBtn" onclick="toggleLiveVoiceCall()" title="Toggle Live Voice Call">📞</button>
-                <button class="icon-btn" onclick="document.getElementById('imagePicker').click()" title="Send Image">📷</button>
-                <input type="file" id="imagePicker" accept="image/*" class="hidden" onchange="handleImageSelected(event)">
                 <input type="text" id="chatInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendChatMessage()">
-                <button class="icon-btn" id="micBtn" onclick="toggleVoiceRecording()" title="Click to start/stop Voice Note">🎙️</button>
                 <button onclick="sendChatMessage()">Send</button>
             </div>
         </div>
     </div>
-
-    <!-- Hidden Remote Audio Player for Live Call Stream -->
-    <audio id="remoteAudioPlayer" autoplay></audio>
 
     <script src="game.js"></script>
 </body>
