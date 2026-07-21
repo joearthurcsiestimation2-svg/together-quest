@@ -17,6 +17,9 @@ let players = {}, activeGame = "hub", activeRaceType = "";
 let countdownTimer, isGameRunning = false;
 let isChatExpanded = false;
 
+// Wheel Animation Vars
+let wheelAngle = 0, isWheelSpinning = false;
+
 // 2D Canvas Engine Vars
 let canvas, ctx, animFrameId, targets = [], particles = [];
 let myScore = 0, opponentScore = 0, timeRemaining = 30;
@@ -27,7 +30,7 @@ const rulesBook = {
     balloon: "Balloon Pop:\n- Tap rising balloons on screen to pop them.\n- Score higher than AI / Partner before time expires!",
     hearts: "Catch Hearts:\n- Catch falling glowing hearts!\n- Hard difficulty moves targets faster.",
     coins: "Speed Coins:\n- Tap coins quickly before they vanish.",
-    td: "Truth or Dare:\n- Pick Truth or Dare for a fun question or challenge.\n- Complete it or pass the turn!"
+    td: "Truth or Dare:\n- Spin the wheel when it's your turn!\n- Complete the Truth or Dare challenge shown."
 };
 
 const truthList = [
@@ -35,7 +38,7 @@ const truthList = [
     "Aap ka pehla crush konsa celebrity ya banda tha?",
     "Agar aap ko $10,000 milain to pehli cheez kya khareedoge?",
     "Aap ki life ki sab se bari secret wish kya hai?",
-    "Kkisi ke samne boht bara jhooth bola hai kabhi?"
+    "Kisi ke samne boht bara jhooth bola hai kabhi?"
 ];
 
 const dareList = [
@@ -172,6 +175,7 @@ function switchLayout(screen) {
         isGameRunning = true;
         if (screen === 'ttt') initTTT();
         if (['balloon', 'hearts', 'coins'].includes(screen)) initGraphicsEngine(screen);
+        if (screen === 'td') initTDGame();
     });
 }
 
@@ -283,7 +287,7 @@ function playTTT(idx) {
 
         document.getElementById('ttt-status').innerText = "AI thinking... 🤔";
         const diff = document.getElementById('difficultySelect').value;
-        const delay = diff === 'easy' ? 900 : diff === 'medium' ? 500 : 250;
+        const delay = diff === 'easy' ? 900 : diff === 'medium' ? 600 : 350;
 
         setTimeout(() => {
             if(!isGameRunning) return;
@@ -291,9 +295,14 @@ function playTTT(idx) {
             cells.forEach((c, i) => { if(c.innerText === "") emptyIdxs.push(i); });
             if(emptyIdxs.length === 0) return;
             
-            let aiPick = (diff === 'hard') 
-                ? (findWinningMove(cells, "⭕") ?? findWinningMove(cells, "❌") ?? emptyIdxs[0])
-                : emptyIdxs[Math.floor(Math.random() * emptyIdxs.length)];
+            // HUMAN-BALANCED AI: Hard mode won't always block 100% perfectly
+            let aiPick;
+            if (diff === 'hard') {
+                const mistakeChance = Math.random() < 0.25; // 25% chance of slight human error
+                aiPick = (!mistakeChance && (findWinningMove(cells, "⭕") ?? findWinningMove(cells, "❌"))) ?? emptyIdxs[Math.floor(Math.random() * emptyIdxs.length)];
+            } else {
+                aiPick = emptyIdxs[Math.floor(Math.random() * emptyIdxs.length)];
+            }
 
             cells[aiPick].innerText = "⭕";
             if (checkTTTLocalWin("⭕")) triggerGameEnd(false, "AI Outsmarted You!");
@@ -376,7 +385,7 @@ function checkRPSResult() {
     }
 }
 
-// ==================== [3] FIXED CANVAS ENGINE (BALLOON, HEARTS, COINS) ====================
+// ==================== [3] CANVAS GRAPHICS ENGINE (NORMALIZED SMART AI) ====================
 function initGraphicsEngine(type) {
     targets = []; particles = [];
     myScore = 0; opponentScore = 0; timeRemaining = 30;
@@ -385,7 +394,7 @@ function initGraphicsEngine(type) {
     document.getElementById('partner-race-score').innerText = isSinglePlayer ? `AI: ${opponentScore}` : "Opponent: 0";
 
     const diff = document.getElementById('difficultySelect').value;
-    const spawnRate = diff === 'easy' ? 35 : diff === 'medium' ? 22 : 14;
+    const spawnRate = diff === 'easy' ? 35 : diff === 'medium' ? 24 : 18;
     let spawnCounter = 0;
 
     clearInterval(countdownTimer);
@@ -393,7 +402,6 @@ function initGraphicsEngine(type) {
         timeRemaining--;
         document.getElementById('race-timer').innerText = `${timeRemaining}s`;
 
-        // FIXED LOSS / WIN EVALUATION
         if (timeRemaining <= 0) {
             let winStatus = myScore > opponentScore ? true : myScore < opponentScore ? false : "tie";
             triggerGameEnd(winStatus, `Final Score - You: ${myScore} | Opponent: ${opponentScore}`);
@@ -409,8 +417,8 @@ function initGraphicsEngine(type) {
             spawnTarget(type, diff);
         }
 
-        // FIXED AI Dynamic Competition Logic (Smart AI misses/hits according to difficulty)
-        let aiHitChance = diff === 'easy' ? 0.015 : diff === 'medium' ? 0.038 : 0.07;
+        // BALANCED AI: Hard mode reduced from 0.07 to 0.032 to make it beatable
+        let aiHitChance = diff === 'easy' ? 0.012 : diff === 'medium' ? 0.022 : 0.032;
         if (isSinglePlayer && Math.random() < aiHitChance) {
             if (targets.length > 0) {
                 let aiIdx = Math.floor(Math.random() * targets.length);
@@ -454,14 +462,14 @@ function initGraphicsEngine(type) {
 }
 
 function spawnTarget(type, diff) {
-    let speedMult = diff === 'easy' ? 1 : diff === 'medium' ? 1.8 : 2.6;
+    let speedMult = diff === 'easy' ? 1 : diff === 'medium' ? 1.6 : 2.2;
     let symbol = type === 'balloon' ? '🎈' : type === 'hearts' ? '❤️' : '🪙';
     let glow = type === 'balloon' ? '#ff3366' : type === 'hearts' ? '#ff4757' : '#ffd700';
 
     targets.push({
         x: Math.random() * (canvas.width - 60) + 30,
         y: type === 'balloon' ? canvas.height + 30 : -20,
-        vy: type === 'balloon' ? -speedMult * (1.5 + Math.random()) : speedMult * (1.5 + Math.random()),
+        vy: type === 'balloon' ? -speedMult * (1.3 + Math.random()) : speedMult * (1.3 + Math.random()),
         size: 36,
         symbol: symbol,
         glow: glow
@@ -508,12 +516,47 @@ function updateRaceScoreboard() {
     document.getElementById('partner-race-score').innerText = `${players[partnerId]?.name || 'Partner'}: ${players[partnerId]?.score || 0}`;
 }
 
-// ==================== [4] TRUTH OR DARE GAME ====================
-function fetchTDChallenge(type) {
-    const arr = type === 'truth' ? truthList : dareList;
-    const item = arr[Math.floor(Math.random() * arr.length)];
-    const card = document.getElementById('td-display-card');
-    card.innerText = `${type.toUpperCase()}: "${item}"`;
+// ==================== [4] ROTATING WHEEL TRUTH OR DARE ====================
+function initTDGame() {
+    document.getElementById('td-display-card').innerText = 'Tap "SPIN WHEEL 🎡" to select a challenge!';
+    document.getElementById('spinWheelBtn').disabled = false;
+    document.getElementById('td-turn-status').innerText = "Your Turn to Spin!";
+}
+
+function spinTDWheel() {
+    if (isWheelSpinning) return;
+    isWheelSpinning = true;
+
+    const btn = document.getElementById('spinWheelBtn');
+    btn.disabled = true;
+    document.getElementById('td-display-card').innerText = "Wheel is spinning... 🌀";
+
+    // Random Rotations (5 to 10 full turns + random offset)
+    const randomTurns = 360 * (5 + Math.floor(Math.random() * 5));
+    const randomDegree = Math.floor(Math.random() * 360);
+    wheelAngle += randomTurns + randomDegree;
+
+    const wheel = document.getElementById('wheelCircle');
+    wheel.style.transform = `rotate(${wheelAngle}deg)`;
+
+    setTimeout(() => {
+        isWheelSpinning = false;
+        btn.disabled = false;
+
+        // Calculate landed segment
+        const actualDeg = wheelAngle % 360;
+        // 0-90: Truth, 90-180: Dare, 180-270: Truth, 270-360: Dare
+        const choice = (actualDeg >= 0 && actualDeg < 90) || (actualDeg >= 180 && actualDeg < 270) ? 'truth' : 'dare';
+
+        const arr = choice === 'truth' ? truthList : dareList;
+        const resultText = arr[Math.floor(Math.random() * arr.length)];
+
+        document.getElementById('td-display-card').innerText = `${choice.toUpperCase()}: "${resultText}"`;
+
+        if (isSinglePlayer) {
+            document.getElementById('td-turn-status').innerText = "Challenge Selected! Complete it 🎯";
+        }
+    }, 3000);
 }
 
 // ==================== [5] FLOATING LIVE CHAT SYSTEM ====================

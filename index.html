@@ -111,12 +111,49 @@
             box-shadow: inset 0 0 20px rgba(0,0,0,0.8); cursor: crosshair; touch-action: none;
         }
 
-        /* Truth or Dare Card */
+        /* Spinning Wheel UI for Truth or Dare */
+        .wheel-wrapper {
+            position: relative; width: 220px; height: 220px; margin: 15px auto;
+        }
+
+        .wheel-pointer {
+            position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+            width: 0; height: 0;
+            border-left: 14px solid transparent;
+            border-right: 14px solid transparent;
+            border-top: 24px solid var(--accent);
+            z-index: 10; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+        }
+
+        .wheel-circle {
+            width: 100%; height: 100%; border-radius: 50%;
+            border: 6px solid #fff;
+            background: conic-gradient(
+                #00b894 0deg 90deg, 
+                #d63031 90deg 180deg, 
+                #00b894 180deg 270deg, 
+                #d63031 270deg 360deg
+            );
+            position: relative; overflow: hidden;
+            box-shadow: 0 0 25px rgba(255,255,255,0.2);
+            transition: transform 3s cubic-bezier(0.15, 0.9, 0.2, 1);
+        }
+
+        .wheel-label {
+            position: absolute; width: 50%; height: 50%;
+            transform-origin: 100% 100%; display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 800; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+        .wl-1 { transform: rotate(0deg); }
+        .wl-2 { transform: rotate(90deg); }
+        .wl-3 { transform: rotate(180deg); }
+        .wl-4 { transform: rotate(270deg); }
+
         .td-card {
             background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
-            border: 1px dashed var(--accent); padding: 20px; border-radius: 20px;
-            margin: 15px 0; min-height: 110px; display: flex; align-items: center; justify-content: center;
-            font-size: 16px; font-weight: 600; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            border: 1px dashed var(--accent); padding: 16px; border-radius: 20px;
+            margin: 10px 0; min-height: 80px; display: flex; align-items: center; justify-content: center;
+            font-size: 15px; font-weight: 600; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
 
         /* Floating Live Chat Box */
@@ -178,7 +215,7 @@
     <!-- Login Lobby -->
     <div id="lobby-screen" class="container">
         <h1>Together Quest ✨</h1>
-        <p style="font-size:14px; color:#a0a5c0; margin-bottom:20px;">Arcade Engine v2.5 Pro</p>
+        <p style="font-size:14px; color:#a0a5c0; margin-bottom:20px;">Arcade Engine v2.6 Pro</p>
         
         <select id="gameModeType" onchange="toggleRoomInput()">
             <option value="single">👤 Single Player (Vs Smart AI)</option>
@@ -206,7 +243,7 @@
             <select id="difficultySelect">
                 <option value="easy">🟢 Easy Mode</option>
                 <option value="medium" selected>🟡 Medium Mode</option>
-                <option value="hard">🔴 Hard Extreme</option>
+                <option value="hard">🔴 Hard (Balanced Challenge)</option>
             </select>
         </div>
 
@@ -265,21 +302,28 @@
         <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:12px;">Back to Hub 🚪</button>
     </div>
 
-    <!-- Truth or Dare Screen -->
+    <!-- Truth or Dare Wheel Screen -->
     <div id="game-td" class="container hidden">
         <button class="btn-rule" onclick="showRules('td')">Rules 📜</button>
-        <h2>🎯 Truth or Dare 🎯</h2>
-        <div id="td-turn-status" style="color:var(--accent); font-weight:bold; margin-bottom:10px;">Select an option below</div>
+        <h2>🎯 Spin the Wheel 🎯</h2>
+        <div id="td-turn-status" style="color:var(--accent); font-weight:bold; margin-bottom:5px;">Your Turn to Spin!</div>
         
-        <div class="td-card" id="td-display-card">
-            Click "Truth 😇" or "Dare 😈" to generate a challenge!
+        <div class="wheel-wrapper">
+            <div class="wheel-pointer"></div>
+            <div class="wheel-circle" id="wheelCircle">
+                <div class="wheel-label wl-1">TRUTH 😇</div>
+                <div class="wheel-label wl-2">DARE 😈</div>
+                <div class="wheel-label wl-3">TRUTH 😇</div>
+                <div class="wheel-label wl-4">DARE 😈</div>
+            </div>
         </div>
 
-        <div style="display:flex; gap:10px; margin-top:10px;">
-            <button onclick="fetchTDChallenge('truth')" style="background:linear-gradient(135deg, #00b894, #00cec9);">Truth 😇</button>
-            <button onclick="fetchTDChallenge('dare')" style="background:linear-gradient(135deg, #e17055, #d63031);">Dare 😈</button>
+        <div class="td-card" id="td-display-card">
+            Tap "SPIN WHEEL 🎡" to select a challenge!
         </div>
-        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:12px;">Back to Hub 🚪</button>
+
+        <button id="spinWheelBtn" onclick="spinTDWheel()" style="background:linear-gradient(135deg, #00b894, #00cec9); font-size:16px;">SPIN WHEEL 🎡</button>
+        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:8px;">Back to Hub 🚪</button>
     </div>
 
     <!-- Floating In-Game Live Chat Widget -->
