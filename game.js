@@ -12,9 +12,10 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
 let playerId, myName, currentRoom, isSinglePlayer = true;
-let roomRef, playerRef;
+let roomRef, playerRef, chatRef;
 let players = {}, activeGame = "hub", activeRaceType = "";
 let countdownTimer, isGameRunning = false;
+let isChatExpanded = false;
 
 // 2D Canvas Engine Vars
 let canvas, ctx, animFrameId, targets = [], particles = [];
@@ -25,8 +26,25 @@ const rulesBook = {
     rps: "Rock Paper Scissors:\n- Rock ✊ beats Scissors ✌️\n- Paper ✋ beats Rock ✊\n- Scissors ✌️ beats Paper ✋",
     balloon: "Balloon Pop:\n- Tap rising balloons on screen to pop them.\n- Score higher than AI / Partner before time expires!",
     hearts: "Catch Hearts:\n- Catch falling glowing hearts!\n- Hard difficulty moves targets faster.",
-    coins: "Speed Coins:\n- Tap coins quickly before they vanish."
+    coins: "Speed Coins:\n- Tap coins quickly before they vanish.",
+    td: "Truth or Dare:\n- Pick Truth or Dare for a fun question or challenge.\n- Complete it or pass the turn!"
 };
+
+const truthList = [
+    "Aap ki sab se funny ya embarrassing memory konsi hai?",
+    "Aap ka pehla crush konsa celebrity ya banda tha?",
+    "Agar aap ko $10,000 milain to pehli cheez kya khareedoge?",
+    "Aap ki life ki sab se bari secret wish kya hai?",
+    "Kkisi ke samne boht bara jhooth bola hai kabhi?"
+];
+
+const dareList = [
+    "Apne room mein 10 seconds ke liye funny dance karo!",
+    "Opponent ki tareef mein 3 lines bolo bina rukay!",
+    "Agley 2 minutes tak funny voice mein baat karo!",
+    "Apne phone se kisi dost ko random emoji send karo!",
+    "Apni sab se mazaqia shakal bana kar dikhao!"
+];
 
 function toggleRoomInput() {
     const mode = document.getElementById('gameModeType').value;
@@ -50,6 +68,7 @@ window.addEventListener('load', () => {
         document.getElementById('lobby-screen').classList.add('hidden');
         document.getElementById('hub-screen').classList.remove('hidden');
         document.getElementById('welcome-msg').innerText = `Welcome ${myName}!`;
+        document.getElementById('chat-widget').classList.remove('hidden');
 
         if (!isSinglePlayer) attachFirebaseListeners();
     }
@@ -73,6 +92,7 @@ document.getElementById('joinBtn').addEventListener('click', () => {
     document.getElementById('lobby-screen').classList.add('hidden');
     document.getElementById('hub-screen').classList.remove('hidden');
     document.getElementById('welcome-msg').innerText = `Welcome ${myName}!`;
+    document.getElementById('chat-widget').classList.remove('hidden');
 
     if (isSinglePlayer) {
         players[playerId] = { name: myName, score: 0 };
@@ -85,6 +105,7 @@ document.getElementById('joinBtn').addEventListener('click', () => {
 function attachFirebaseListeners() {
     roomRef = database.ref('arcadeRooms/' + currentRoom);
     playerRef = roomRef.child('players').child(playerId);
+    chatRef = roomRef.child('chat');
 
     playerRef.set({ id: playerId, name: myName, score: 0 });
     playerRef.onDisconnect().remove();
@@ -110,6 +131,11 @@ function attachFirebaseListeners() {
             renderTTTBoard(data.board || Array(9).fill(""));
             evaluateTTT(data.board || Array(9).fill(""), data.turn);
         }
+    });
+
+    chatRef.on('child_added', (snapshot) => {
+        const msg = snapshot.val();
+        appendChatMessage(msg.sender, msg.text);
     });
 }
 
@@ -181,7 +207,7 @@ function triggerGameEnd(didIWin, message) {
         title.innerText = "IT'S A DRAW! 🤝";
         title.className = "modal-title";
         title.style.color = "#ffeaa7";
-    } else if (didIWin) {
+    } else if (didIWin === true) {
         title.innerText = "VICTORY! 🎉";
         title.className = "modal-title win-title";
     } else {
@@ -225,6 +251,7 @@ function exitToMainMenu() {
 
         document.getElementById('result-modal').classList.add('hidden');
         document.getElementById('rules-modal').classList.add('hidden');
+        document.getElementById('chat-widget').classList.add('hidden');
 
         document.querySelectorAll('.container').forEach(c => c.classList.add('hidden'));
         document.getElementById('lobby-screen').classList.remove('hidden');
@@ -333,7 +360,7 @@ function playRPS(move) {
         else triggerGameEnd(false, `You: ${move} vs AI: ${aiMove}`);
     } else {
         playerRef.update({ currentMove: move });
-        document.getElementById('rps-status').innerText = "Move Locked! 🔒";
+        document.getElementById('rps-status').innerText = "Move Locked! 🔒 Waiting for opponent...";
     }
 }
 
@@ -349,7 +376,7 @@ function checkRPSResult() {
     }
 }
 
-// ==================== [3] HIGH-GRAPHICS 2D CANVAS ENGINE ====================
+// ==================== [3] FIXED CANVAS ENGINE (BALLOON, HEARTS, COINS) ====================
 function initGraphicsEngine(type) {
     targets = []; particles = [];
     myScore = 0; opponentScore = 0; timeRemaining = 30;
@@ -358,15 +385,18 @@ function initGraphicsEngine(type) {
     document.getElementById('partner-race-score').innerText = isSinglePlayer ? `AI: ${opponentScore}` : "Opponent: 0";
 
     const diff = document.getElementById('difficultySelect').value;
-    const spawnRate = diff === 'easy' ? 40 : diff === 'medium' ? 25 : 15;
+    const spawnRate = diff === 'easy' ? 35 : diff === 'medium' ? 22 : 14;
     let spawnCounter = 0;
 
     clearInterval(countdownTimer);
     countdownTimer = setInterval(() => {
         timeRemaining--;
         document.getElementById('race-timer').innerText = `${timeRemaining}s`;
+
+        // FIXED LOSS / WIN EVALUATION
         if (timeRemaining <= 0) {
-            triggerGameEnd(myScore > opponentScore ? true : myScore < opponentScore ? false : "tie", `Final Score: You (${myScore}) - Enemy (${opponentScore})`);
+            let winStatus = myScore > opponentScore ? true : myScore < opponentScore ? false : "tie";
+            triggerGameEnd(winStatus, `Final Score - You: ${myScore} | Opponent: ${opponentScore}`);
         }
     }, 1000);
 
@@ -379,7 +409,9 @@ function initGraphicsEngine(type) {
             spawnTarget(type, diff);
         }
 
-        if (isSinglePlayer && Math.random() < (diff === 'easy' ? 0.02 : diff === 'medium' ? 0.04 : 0.08)) {
+        // FIXED AI Dynamic Competition Logic (Smart AI misses/hits according to difficulty)
+        let aiHitChance = diff === 'easy' ? 0.015 : diff === 'medium' ? 0.038 : 0.07;
+        if (isSinglePlayer && Math.random() < aiHitChance) {
             if (targets.length > 0) {
                 let aiIdx = Math.floor(Math.random() * targets.length);
                 let t = targets[aiIdx];
@@ -422,12 +454,12 @@ function initGraphicsEngine(type) {
 }
 
 function spawnTarget(type, diff) {
-    let speedMult = diff === 'easy' ? 1 : diff === 'medium' ? 1.8 : 2.5;
+    let speedMult = diff === 'easy' ? 1 : diff === 'medium' ? 1.8 : 2.6;
     let symbol = type === 'balloon' ? '🎈' : type === 'hearts' ? '❤️' : '🪙';
     let glow = type === 'balloon' ? '#ff3366' : type === 'hearts' ? '#ff4757' : '#ffd700';
 
     targets.push({
-        x: Math.random() * (canvas.width - 50) + 25,
+        x: Math.random() * (canvas.width - 60) + 30,
         y: type === 'balloon' ? canvas.height + 30 : -20,
         vy: type === 'balloon' ? -speedMult * (1.5 + Math.random()) : speedMult * (1.5 + Math.random()),
         size: 36,
@@ -474,4 +506,55 @@ function updateRaceScoreboard() {
     if(pKeys.length < 2 || isSinglePlayer) return;
     const partnerId = pKeys[0] === playerId ? pKeys[1] : pKeys[0];
     document.getElementById('partner-race-score').innerText = `${players[partnerId]?.name || 'Partner'}: ${players[partnerId]?.score || 0}`;
+}
+
+// ==================== [4] TRUTH OR DARE GAME ====================
+function fetchTDChallenge(type) {
+    const arr = type === 'truth' ? truthList : dareList;
+    const item = arr[Math.floor(Math.random() * arr.length)];
+    const card = document.getElementById('td-display-card');
+    card.innerText = `${type.toUpperCase()}: "${item}"`;
+}
+
+// ==================== [5] FLOATING LIVE CHAT SYSTEM ====================
+function toggleChatExpand() {
+    isChatExpanded = !isChatExpanded;
+    const body = document.getElementById('chat-body');
+    const icon = document.getElementById('chat-toggle-icon');
+    if (isChatExpanded) {
+        body.classList.remove('hidden');
+        icon.innerText = "▼";
+    } else {
+        body.classList.add('hidden');
+        icon.innerText = "▲";
+    }
+}
+
+function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const txt = input.value.trim();
+    if (!txt) return;
+
+    if (isSinglePlayer) {
+        appendChatMessage(myName, txt);
+        input.value = "";
+        
+        // Auto AI Response
+        setTimeout(() => {
+            const aiReplies = ["Good move! 🎮", "Haha sahi keh rahe ho! 😂", "Main jeet ke rahunga! 🔥", "Zabardast! ✨"];
+            appendChatMessage("Smart AI 🤖", aiReplies[Math.floor(Math.random() * aiReplies.length)]);
+        }, 1000);
+    } else {
+        chatRef.push({ sender: myName, text: txt });
+        input.value = "";
+    }
+}
+
+function appendChatMessage(sender, text) {
+    const box = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = 'chat-msg';
+    div.innerHTML = `<b>${sender}:</b> ${text}`;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
 }

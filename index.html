@@ -25,6 +25,7 @@
             color: #fff; min-height: 100vh;
             display: flex; flex-direction: column; align-items: center;
             overflow-x: hidden; touch-action: manipulation;
+            padding-bottom: 70px;
         }
 
         .container {
@@ -64,14 +65,13 @@
         .hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 15px; }
         .game-card {
             background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-            padding: 20px 15px; border-radius: 22px; cursor: pointer; font-weight: 800;
+            padding: 18px 12px; border-radius: 22px; cursor: pointer; font-weight: 800;
             border: 1px solid rgba(255,255,255,0.08); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
         .game-card:hover { transform: translateY(-5px) scale(1.02); border-color: var(--primary); box-shadow: 0 10px 25px rgba(255,51,102,0.3); }
-        .game-card span { font-size: 38px; margin-bottom: 6px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
+        .game-card span { font-size: 36px; margin-bottom: 6px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
 
-        /* Countdown Overlay */
         #countdown-overlay {
             position: fixed; inset: 0; background: rgba(10, 11, 20, 0.9);
             display: flex; justify-content: center; align-items: center;
@@ -79,7 +79,6 @@
             text-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
         }
 
-        /* Result Popup Modal */
         .modal {
             position: fixed; inset: 0; background: rgba(5, 5, 12, 0.85);
             display: flex; justify-content: center; align-items: center; z-index: 600; backdrop-filter: blur(12px);
@@ -97,7 +96,6 @@
         .win-title { color: #00ffaa; text-shadow: 0 0 20px rgba(0,255,170,0.5); }
         .lose-title { color: #ff3366; text-shadow: 0 0 20px rgba(255,51,102,0.5); }
 
-        /* Tic Tac Toe Grid */
         .ttt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 300px; margin: 15px auto; }
         .cell {
             background: rgba(255,255,255,0.05); height: 85px; border-radius: 18px;
@@ -107,12 +105,47 @@
         }
         .cell:hover { background: rgba(255,255,255,0.1); transform: scale(1.03); }
 
-        /* Graphics Engine Canvas Zone */
         #gameCanvas {
-            width: 100%; height: 340px; background: #0c0d18;
+            width: 100%; height: 320px; background: #0c0d18;
             border-radius: 20px; border: 1px solid rgba(255,255,255,0.15);
             box-shadow: inset 0 0 20px rgba(0,0,0,0.8); cursor: crosshair; touch-action: none;
         }
+
+        /* Truth or Dare Card */
+        .td-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+            border: 1px dashed var(--accent); padding: 20px; border-radius: 20px;
+            margin: 15px 0; min-height: 110px; display: flex; align-items: center; justify-content: center;
+            font-size: 16px; font-weight: 600; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* Floating Live Chat Box */
+        #chat-widget {
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 92%; max-width: 480px; z-index: 400; background: rgba(15, 16, 29, 0.95);
+            border: 1px solid rgba(255,255,255,0.2); border-radius: 20px 20px 0 0;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.8); backdrop-filter: blur(15px);
+            transition: all 0.3s ease;
+        }
+
+        #chat-header {
+            padding: 10px 16px; background: rgba(255, 51, 102, 0.2); border-radius: 20px 20px 0 0;
+            display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+            font-size: 13px; font-weight: 800; color: var(--accent);
+        }
+
+        #chat-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+        #chat-messages {
+            height: 110px; overflow-y: auto; text-align: left; font-size: 12px;
+            display: flex; flex-direction: column; gap: 6px; padding-right: 4px;
+        }
+
+        .chat-msg { background: rgba(255,255,255,0.07); padding: 6px 10px; border-radius: 10px; word-break: break-word; }
+        .chat-msg b { color: var(--primary); }
+
+        #chat-input-row { display: flex; gap: 6px; margin-top: 4px; }
+        #chat-input-row input { margin: 0; padding: 8px 12px; font-size: 12px; }
+        #chat-input-row button { width: auto; margin: 0; padding: 8px 16px; font-size: 12px; }
 
         .hidden { display: none !important; }
 
@@ -123,15 +156,17 @@
 
     <div id="countdown-overlay" class="hidden">3</div>
 
+    <!-- Result Pop-up Modal -->
     <div id="result-modal" class="modal hidden">
         <div class="modal-content">
             <div id="modal-status-title" class="modal-title win-title">VICTORY! 🎉</div>
             <p id="modal-desc" style="color:#a0a5c0; margin-bottom:20px;">Exceptional Performance!</p>
             <button onclick="requestReplay()" style="background: linear-gradient(135deg, #00b894, #00cec9);">Play Again 🔄</button>
-            <button onclick="backToHub()" style="background: rgba(255,255,255,0.1); margin-top:8px;">Exit Hub 🚪</button>
+            <button onclick="backToHub()" style="background: rgba(255,255,255,0.1); margin-top:8px;">Back to Hub 🚪</button>
         </div>
     </div>
 
+    <!-- Rules Modal -->
     <div id="rules-modal" class="modal hidden">
         <div class="modal-content">
             <h3 style="color:var(--accent);">Game Instructions 📜</h3>
@@ -143,7 +178,7 @@
     <!-- Login Lobby -->
     <div id="lobby-screen" class="container">
         <h1>Together Quest ✨</h1>
-        <p style="font-size:14px; color:#a0a5c0; margin-bottom:20px;">Arcade Engine v2.0</p>
+        <p style="font-size:14px; color:#a0a5c0; margin-bottom:20px;">Arcade Engine v2.5 Pro</p>
         
         <select id="gameModeType" onchange="toggleRoomInput()">
             <option value="single">👤 Single Player (Vs Smart AI)</option>
@@ -181,6 +216,7 @@
             <div class="game-card" onclick="openGame('balloon')"><span>🎈</span>Balloon Pop</div>
             <div class="game-card" onclick="openGame('hearts')"><span>❤️</span>Catch Hearts</div>
             <div class="game-card" onclick="openGame('coins')"><span>🪙</span>Speed Coins</div>
+            <div class="game-card" onclick="openGame('td')"><span>🎯</span>Truth or Dare</div>
         </div>
     </div>
 
@@ -225,8 +261,42 @@
             <div id="my-race-score" style="color:#00ffaa;">You: 0</div>
             <div id="partner-race-score" style="color:#ff7675;">Opponent: 0</div>
         </div>
-        <canvas id="gameCanvas" width="400" height="340"></canvas>
+        <canvas id="gameCanvas" width="400" height="320"></canvas>
         <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:12px;">Back to Hub 🚪</button>
+    </div>
+
+    <!-- Truth or Dare Screen -->
+    <div id="game-td" class="container hidden">
+        <button class="btn-rule" onclick="showRules('td')">Rules 📜</button>
+        <h2>🎯 Truth or Dare 🎯</h2>
+        <div id="td-turn-status" style="color:var(--accent); font-weight:bold; margin-bottom:10px;">Select an option below</div>
+        
+        <div class="td-card" id="td-display-card">
+            Click "Truth 😇" or "Dare 😈" to generate a challenge!
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button onclick="fetchTDChallenge('truth')" style="background:linear-gradient(135deg, #00b894, #00cec9);">Truth 😇</button>
+            <button onclick="fetchTDChallenge('dare')" style="background:linear-gradient(135deg, #e17055, #d63031);">Dare 😈</button>
+        </div>
+        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:12px;">Back to Hub 🚪</button>
+    </div>
+
+    <!-- Floating In-Game Live Chat Widget -->
+    <div id="chat-widget" class="hidden">
+        <div id="chat-header" onclick="toggleChatExpand()">
+            <span>💬 Live Arcade Chat</span>
+            <span id="chat-toggle-icon">▲</span>
+        </div>
+        <div id="chat-body" class="hidden">
+            <div id="chat-messages">
+                <div class="chat-msg"><b>System:</b> Welcome to live chat!</div>
+            </div>
+            <div id="chat-input-row">
+                <input type="text" id="chatInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+                <button onclick="sendChatMessage()">Send</button>
+            </div>
+        </div>
     </div>
 
     <script src="game.js"></script>
