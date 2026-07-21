@@ -111,43 +111,21 @@
             box-shadow: inset 0 0 20px rgba(0,0,0,0.8); cursor: crosshair; touch-action: none;
         }
 
-        /* Spinning Wheel UI for Truth or Dare */
-        .wheel-wrapper {
-            position: relative; width: 220px; height: 220px; margin: 15px auto;
-        }
-
+        .wheel-wrapper { position: relative; width: 220px; height: 220px; margin: 15px auto; }
         .wheel-pointer {
             position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-            width: 0; height: 0;
-            border-left: 14px solid transparent;
-            border-right: 14px solid transparent;
-            border-top: 24px solid var(--accent);
-            z-index: 10; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+            width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent;
+            border-top: 24px solid var(--accent); z-index: 10; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
         }
-
         .wheel-circle {
-            width: 100%; height: 100%; border-radius: 50%;
-            border: 6px solid #fff;
-            background: conic-gradient(
-                #00b894 0deg 90deg, 
-                #d63031 90deg 180deg, 
-                #00b894 180deg 270deg, 
-                #d63031 270deg 360deg
-            );
-            position: relative; overflow: hidden;
-            box-shadow: 0 0 25px rgba(255,255,255,0.2);
+            width: 100%; height: 100%; border-radius: 50%; border: 6px solid #fff;
+            background: conic-gradient(#00b894 0deg 90deg, #d63031 90deg 180deg, #00b894 180deg 270deg, #d63031 270deg 360deg);
+            position: relative; overflow: hidden; box-shadow: 0 0 25px rgba(255,255,255,0.2);
             transition: transform 3s cubic-bezier(0.15, 0.9, 0.2, 1);
         }
-
-        .wheel-label {
-            position: absolute; width: 50%; height: 50%;
-            transform-origin: 100% 100%; display: flex; align-items: center; justify-content: center;
-            font-size: 13px; font-weight: 800; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-        }
-        .wl-1 { transform: rotate(0deg); }
-        .wl-2 { transform: rotate(90deg); }
-        .wl-3 { transform: rotate(180deg); }
-        .wl-4 { transform: rotate(270deg); }
+        .wheel-label { position: absolute; width: 50%; height: 50%; transform-origin: 100% 100%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        .wl-1 { transform: rotate(0deg); } .wl-2 { transform: rotate(90deg); }
+        .wl-3 { transform: rotate(180deg); } .wl-4 { transform: rotate(270deg); }
 
         .td-card {
             background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
@@ -156,7 +134,7 @@
             font-size: 15px; font-weight: 600; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
 
-        /* Floating Live Chat Box */
+        /* Advanced Floating Live Chat Box UI */
         #chat-widget {
             position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
             width: 92%; max-width: 480px; z-index: 400; background: rgba(15, 16, 29, 0.95);
@@ -171,31 +149,37 @@
             font-size: 13px; font-weight: 800; color: var(--accent);
         }
 
+        .chat-header-actions { display: flex; gap: 8px; align-items: center; }
+        .chat-action-btn { background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 2px 8px; border-radius: 8px; font-size: 11px; cursor: pointer; }
+        .chat-action-btn:hover { background: rgba(255,51,102,0.6); }
+
         #chat-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
         #chat-messages {
-            height: 120px; overflow-y: auto; text-align: left; font-size: 12px;
+            height: 130px; overflow-y: auto; text-align: left; font-size: 12px;
             display: flex; flex-direction: column; gap: 6px; padding-right: 4px;
         }
 
         .chat-msg { background: rgba(255,255,255,0.07); padding: 8px 10px; border-radius: 12px; word-break: break-word; }
         .chat-msg b { color: var(--primary); }
         .chat-msg audio { height: 30px; width: 100%; margin-top: 4px; }
+        .chat-img { max-width: 100%; max-height: 120px; border-radius: 10px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.2); }
 
         #chat-input-row { display: flex; gap: 6px; margin-top: 4px; align-items: center; }
-        #chat-input-row input { margin: 0; padding: 8px 12px; font-size: 12px; }
-        #chat-input-row button { width: auto; margin: 0; padding: 8px 14px; font-size: 12px; }
-        
-        .mic-btn {
-            background: linear-gradient(135deg, #00b894, #00cec9) !important;
-            min-width: 42px; width: 42px !important; height: 38px; border-radius: 12px !important;
-            display: flex; justify-content: center; align-items: center; font-size: 16px; padding: 0 !important;
+        #chat-input-row input[type="text"] { margin: 0; padding: 8px 12px; font-size: 12px; flex: 1; }
+        #chat-input-row button { width: auto; margin: 0; padding: 8px 12px; font-size: 12px; }
+
+        .icon-btn {
+            background: rgba(255,255,255,0.1) !important;
+            min-width: 36px; width: 36px !important; height: 36px; border-radius: 12px !important;
+            display: flex; justify-content: center; align-items: center; font-size: 15px; padding: 0 !important;
+            box-shadow: none !important; border: 1px solid rgba(255,255,255,0.2) !important;
         }
-        .mic-btn.recording { background: #ff3366 !important; animation: pulse 1s infinite; }
+
+        .icon-btn.recording { background: #ff3366 !important; animation: pulse 1s infinite; }
+        .icon-btn.call-active { background: #00b894 !important; border-color: #00ffaa !important; animation: pulse 1.5s infinite; }
 
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-
         .hidden { display: none !important; }
-
         @keyframes popIn { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     </style>
 </head>
@@ -225,7 +209,7 @@
     <!-- Login Lobby -->
     <div id="lobby-screen" class="container">
         <h1>Together Quest ✨</h1>
-        <p style="font-size:14px; color:#a0a5c0; margin-bottom:20px;">Arcade Engine v2.7 Voice Pro</p>
+        <p style="font-size:14px; color:#a0a5c0; margin-bottom:20px;">Arcade Engine v3.0 Ultimate Chat</p>
         
         <select id="gameModeType" onchange="toggleRoomInput()">
             <option value="single">👤 Single Player (Vs Smart AI)</option>
@@ -336,23 +320,32 @@
         <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:8px;">Back to Hub 🚪</button>
     </div>
 
-    <!-- Floating In-Game Live Chat Widget -->
+    <!-- Floating Live Chat Suite -->
     <div id="chat-widget" class="hidden">
-        <div id="chat-header" onclick="toggleChatExpand()">
-            <span>💬 Live Chat & Voice Notes 🎙️</span>
-            <span id="chat-toggle-icon">▲</span>
+        <div id="chat-header">
+            <span onclick="toggleChatExpand()" style="flex:1;">💬 Live Chat & Voice Call 📞</span>
+            <div class="chat-header-actions">
+                <button class="chat-action-btn" onclick="clearChatMessages()" title="Clear Chat">🗑️ Clear</button>
+                <button class="chat-action-btn" onclick="toggleChatExpand()" title="Close Chat">❌ Close</button>
+            </div>
         </div>
         <div id="chat-body" class="hidden">
             <div id="chat-messages">
-                <div class="chat-msg"><b>System:</b> Welcome to voice-enabled live chat!</div>
+                <div class="chat-msg"><b>System:</b> Live Chat, Voice Notes, Photos & Voice Call active!</div>
             </div>
             <div id="chat-input-row">
+                <button class="icon-btn" id="liveCallBtn" onclick="toggleLiveVoiceCall()" title="Toggle Live Voice Call">📞</button>
+                <button class="icon-btn" onclick="document.getElementById('imagePicker').click()" title="Send Image">📷</button>
+                <input type="file" id="imagePicker" accept="image/*" class="hidden" onchange="handleImageSelected(event)">
                 <input type="text" id="chatInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendChatMessage()">
-                <button class="mic-btn" id="micBtn" title="Hold to record voice note">🎙️</button>
+                <button class="icon-btn" id="micBtn" onclick="toggleVoiceRecording()" title="Click to start/stop Voice Note">🎙️</button>
                 <button onclick="sendChatMessage()">Send</button>
             </div>
         </div>
     </div>
+
+    <!-- Hidden Remote Audio Player for Live Call Stream -->
+    <audio id="remoteAudioPlayer" autoplay></audio>
 
     <script src="game.js"></script>
 </body>

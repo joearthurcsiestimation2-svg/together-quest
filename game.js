@@ -12,13 +12,17 @@ firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
 let playerId, myName, currentRoom, isSinglePlayer = true;
-let roomRef, playerRef, chatRef;
+let roomRef, playerRef, chatRef, callRef;
 let players = {}, activeGame = "hub", activeRaceType = "";
 let countdownTimer, isGameRunning = false;
 let isChatExpanded = false;
 
-// Audio Recording Engine Vars
+// Audio Voice Note Recording Vars
 let mediaRecorder, audioChunks = [], isRecording = false;
+
+// Real-Time Live Voice Call (WebRTC) Vars
+let peerConnection, localStream, isCallActive = false;
+const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
 // Wheel Animation Vars
 let wheelAngle = 0, isWheelSpinning = false;
@@ -64,8 +68,6 @@ window.addEventListener('load', () => {
     canvas = document.getElementById('gameCanvas');
     ctx = canvas.getContext('2d');
     canvas.addEventListener('pointerdown', handleCanvasClick);
-
-    setupVoiceRecorder();
 
     const savedSession = sessionStorage.getItem('tq_session');
     if (savedSession) {
@@ -114,6 +116,7 @@ function attachFirebaseListeners() {
     roomRef = database.ref('arcadeRooms/' + currentRoom);
     playerRef = roomRef.child('players').child(playerId);
     chatRef = roomRef.child('chat');
+    callRef = roomRef.child('callSignals');
 
     playerRef.set({ id: playerId, name: myName, score: 0 });
     playerRef.onDisconnect().remove();
@@ -143,8 +146,15 @@ function attachFirebaseListeners() {
 
     chatRef.on('child_added', (snapshot) => {
         const msg = snapshot.val();
-        appendChatMessage(msg.sender, msg.text, msg.audio);
+        appendChatMessage(msg.sender, msg.text, msg.audio, msg.image);
     });
+
+    chatRef.on('child_removed', () => {
+        const box = document.getElementById('chat-messages');
+        box.innerHTML = `<div class="chat-msg"><b>System:</b> Chat history cleared!</div>`;
+    });
+
+    setupCallSignaling();
 }
 
 function openGame(gameType) {
@@ -559,16 +569,11 @@ function spinTDWheel() {
     }, 3000);
 }
 
-// ==================== [5] VOICE RECORDER & LIVE CHAT ENGINE ====================
-function setupVoiceRecorder() {
+// ==================== [5] ADVANCED CHAT, VOICE NOTES & IMAGE SUITE ====================
+function toggleVoiceRecording() {
     const micBtn = document.getElementById('micBtn');
 
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        micBtn.style.display = 'none';
-        return;
-    }
-
-    const startRecording = () => {
+    if (!isRecording) {
         navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
             mediaRecorder = new MediaRecorder(stream);
             audioChunks = [];
@@ -581,10 +586,10 @@ function setupVoiceRecorder() {
                 reader.onloadend = () => {
                     const base64Audio = reader.result;
                     if (isSinglePlayer) {
-                        appendChatMessage(myName, "", base64Audio);
+                        appendChatMessage(myName, "", base64Audio, null);
                         triggerAIVoiceReply();
                     } else {
-                        chatRef.push({ sender: myName, text: "", audio: base64Audio });
+                        chatRef.push({ sender: myName, text: "", audio: base64Audio, image: null });
                     }
                 };
                 stream.getTracks().forEach(track => track.stop());
@@ -593,21 +598,91 @@ function setupVoiceRecorder() {
             mediaRecorder.start();
             isRecording = true;
             micBtn.classList.add('recording');
-        }).catch(err => alert("Microphone Permission Denied!"));
-    };
-
-    const stopRecording = () => {
+            micBtn.innerText = "🛑";
+        }).catch(() => alert("Microphone Permission Required!"));
+    } else {
         if (mediaRecorder && isRecording) {
             mediaRecorder.stop();
             isRecording = false;
             micBtn.classList.remove('recording');
+            micBtn.innerText = "🎙️";
+        }
+    }
+}
+
+function handleImageSelected(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const base64Img = e.target.result;
+        if (isSinglePlayer) {
+            appendChatMessage(myName, "", null, base64Img);
+            setTimeout(() => appendChatMessage("Smart AI 🤖", "Awesome picture! 📸"), 1000);
+        } else {
+            chatRef.push({ sender: myName, text: "", audio: null, image: base64Img });
         }
     };
+    reader.readAsDataURL(file);
+}
 
-    micBtn.addEventListener('mousedown', startRecording);
-    micBtn.addEventListener('mouseup', stopRecording);
-    micBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startRecording(); });
-    micBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopRecording(); });
+function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const txt = input.value.trim();
+    if (!txt) return;
+
+    if (isSinglePlayer) {
+        appendChatMessage(myName, txt, null, null);
+        input.value = "";
+        
+        setTimeout(() => {
+            const aiReplies = ["Good move! 🎮", "Haha sahi keh rahe ho! 😂", "Main jeet ke rahunga! 🔥", "Zabardast! ✨"];
+            const replyText = aiReplies[Math.floor(Math.random() * aiReplies.length)];
+            appendChatMessage("Smart AI 🤖", replyText, null, null);
+            
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(replyText);
+                window.speechSynthesis.speak(utterance);
+            }
+        }, 1000);
+    } else {
+        chatRef.push({ sender: myName, text: txt, audio: null, image: null });
+        input.value = "";
+    }
+}
+
+function appendChatMessage(sender, text, audioUrl, imageUrl) {
+    const box = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = 'chat-msg';
+
+    let content = `<b>${sender}:</b> `;
+    if (text) content += text;
+    if (audioUrl) content += `<br/><audio controls src="${audioUrl}"></audio>`;
+    if (imageUrl) content += `<br/><img src="${imageUrl}" class="chat-img" onclick="window.open(this.src)"/>`;
+
+    div.innerHTML = content;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+function clearChatMessages() {
+    if (confirm("Kya aap saari chat history delete karna chahte hain?")) {
+        if (isSinglePlayer) {
+            const box = document.getElementById('chat-messages');
+            box.innerHTML = `<div class="chat-msg"><b>System:</b> Chat cleared!</div>`;
+        } else if (chatRef) {
+            chatRef.remove();
+        }
+    }
+}
+
+function toggleChatExpand() {
+    isChatExpanded = !isChatExpanded;
+    const body = document.getElementById('chat-body');
+    if (isChatExpanded) body.classList.remove('hidden');
+    else body.classList.add('hidden');
 }
 
 function triggerAIVoiceReply() {
@@ -618,68 +693,92 @@ function triggerAIVoiceReply() {
             "Aap ki baatein sun kar maza aya, chalo ab kheleim! 😂"
         ];
         const textReply = replies[Math.floor(Math.random() * replies.length)];
-        appendChatMessage("Smart AI 🤖", textReply);
+        appendChatMessage("Smart AI 🤖", textReply, null, null);
 
-        // Text-to-Speech Voice Output for Smart AI
         if ('speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance(textReply);
-            utterance.rate = 1.0;
-            utterance.pitch = 1.1;
             window.speechSynthesis.speak(utterance);
         }
     }, 1200);
 }
 
-function toggleChatExpand() {
-    isChatExpanded = !isChatExpanded;
-    const body = document.getElementById('chat-body');
-    const icon = document.getElementById('chat-toggle-icon');
-    if (isChatExpanded) {
-        body.classList.remove('hidden');
-        icon.innerText = "▼";
-    } else {
-        body.classList.add('hidden');
-        icon.innerText = "▲";
-    }
-}
-
-function sendChatMessage() {
-    const input = document.getElementById('chatInput');
-    const txt = input.value.trim();
-    if (!txt) return;
-
+// ==================== [6] REAL-TIME LIVE VOICE CALL ENGINE (WEBRTC) ====================
+function toggleLiveVoiceCall() {
     if (isSinglePlayer) {
-        appendChatMessage(myName, txt);
-        input.value = "";
-        
-        setTimeout(() => {
-            const aiReplies = ["Good move! 🎮", "Haha sahi keh rahe ho! 😂", "Main jeet ke rahunga! 🔥", "Zabardast! ✨"];
-            const replyText = aiReplies[Math.floor(Math.random() * aiReplies.length)];
-            appendChatMessage("Smart AI 🤖", replyText);
+        alert("Live Voice Call is available in Multiplayer Mode!");
+        return;
+    }
+
+    const btn = document.getElementById('liveCallBtn');
+
+    if (!isCallActive) {
+        navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(stream => {
+            localStream = stream;
+            isCallActive = true;
+            btn.classList.add('call-active');
+            btn.title = "End Voice Call";
             
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(replyText);
-                window.speechSynthesis.speak(utterance);
-            }
-        }, 1000);
+            initPeerConnection();
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+            peerConnection.createOffer().then(offer => {
+                peerConnection.setLocalDescription(offer);
+                callRef.child(playerId).set({ type: 'offer', sdp: offer.sdp });
+            });
+        }).catch(() => alert("Microphone access required for Live Call!"));
     } else {
-        chatRef.push({ sender: myName, text: txt, audio: "" });
-        input.value = "";
+        stopLiveVoiceCall();
     }
 }
 
-function appendChatMessage(sender, text, audioUrl) {
-    const box = document.getElementById('chat-messages');
-    const div = document.createElement('div');
-    div.className = 'chat-msg';
-
-    let content = `<b>${sender}:</b> `;
-    if (text) content += text;
-    if (audioUrl) {
-        content += `<br/><audio controls src="${audioUrl}"></audio>`;
+function stopLiveVoiceCall() {
+    if (peerConnection) peerConnection.close();
+    if (localStream) localStream.getTracks().forEach(track => track.stop());
+    isCallActive = false;
+    
+    const btn = document.getElementById('liveCallBtn');
+    if(btn) {
+        btn.classList.remove('call-active');
+        btn.title = "Toggle Live Voice Call";
     }
+}
 
-    div.innerHTML = content;
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
+function initPeerConnection() {
+    peerConnection = new RTCPeerConnection(rtcConfig);
+
+    peerConnection.ontrack = (event) => {
+        const remoteAudio = document.getElementById('remoteAudioPlayer');
+        if (remoteAudio.srcObject !== event.streams[0]) {
+            remoteAudio.srcObject = event.streams[0];
+        }
+    };
+
+    peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+            callRef.child(playerId + '_candidate').push(event.candidate.toJSON());
+        }
+    };
+}
+
+function setupCallSignaling() {
+    callRef.on('child_added', snapshot => {
+        const key = snapshot.key;
+        const data = snapshot.val();
+
+        if (key.startsWith(playerId)) return; // Ignore own signals
+
+        if (data.type === 'offer' && isCallActive) {
+            initPeerConnection();
+            if (localStream) {
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            }
+            peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+            peerConnection.createAnswer().then(answer => {
+                peerConnection.setLocalDescription(answer);
+                callRef.child(playerId).set({ type: 'answer', sdp: answer.sdp });
+            });
+        } else if (data.type === 'answer' && isCallActive) {
+            peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+        }
+    });
 }
