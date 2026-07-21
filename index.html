@@ -173,16 +173,26 @@
 
         #chat-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
         #chat-messages {
-            height: 110px; overflow-y: auto; text-align: left; font-size: 12px;
+            height: 120px; overflow-y: auto; text-align: left; font-size: 12px;
             display: flex; flex-direction: column; gap: 6px; padding-right: 4px;
         }
 
-        .chat-msg { background: rgba(255,255,255,0.07); padding: 6px 10px; border-radius: 10px; word-break: break-word; }
+        .chat-msg { background: rgba(255,255,255,0.07); padding: 8px 10px; border-radius: 12px; word-break: break-word; }
         .chat-msg b { color: var(--primary); }
+        .chat-msg audio { height: 30px; width: 100%; margin-top: 4px; }
 
-        #chat-input-row { display: flex; gap: 6px; margin-top: 4px; }
+        #chat-input-row { display: flex; gap: 6px; margin-top: 4px; align-items: center; }
         #chat-input-row input { margin: 0; padding: 8px 12px; font-size: 12px; }
-        #chat-input-row button { width: auto; margin: 0; padding: 8px 16px; font-size: 12px; }
+        #chat-input-row button { width: auto; margin: 0; padding: 8px 14px; font-size: 12px; }
+        
+        .mic-btn {
+            background: linear-gradient(135deg, #00b894, #00cec9) !important;
+            min-width: 42px; width: 42px !important; height: 38px; border-radius: 12px !important;
+            display: flex; justify-content: center; align-items: center; font-size: 16px; padding: 0 !important;
+        }
+        .mic-btn.recording { background: #ff3366 !important; animation: pulse 1s infinite; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
         .hidden { display: none !important; }
 
@@ -215,7 +225,7 @@
     <!-- Login Lobby -->
     <div id="lobby-screen" class="container">
         <h1>Together Quest ✨</h1>
-        <p style="font-size:14px; color:#a0a5c0; margin-bottom:20px;">Arcade Engine v2.6 Pro</p>
+        <p style="font-size:14px; color:#a0a5c0; margin-bottom:20px;">Arcade Engine v2.7 Voice Pro</p>
         
         <select id="gameModeType" onchange="toggleRoomInput()">
             <option value="single">👤 Single Player (Vs Smart AI)</option>
@@ -329,15 +339,16 @@
     <!-- Floating In-Game Live Chat Widget -->
     <div id="chat-widget" class="hidden">
         <div id="chat-header" onclick="toggleChatExpand()">
-            <span>💬 Live Arcade Chat</span>
+            <span>💬 Live Chat & Voice Notes 🎙️</span>
             <span id="chat-toggle-icon">▲</span>
         </div>
         <div id="chat-body" class="hidden">
             <div id="chat-messages">
-                <div class="chat-msg"><b>System:</b> Welcome to live chat!</div>
+                <div class="chat-msg"><b>System:</b> Welcome to voice-enabled live chat!</div>
             </div>
             <div id="chat-input-row">
                 <input type="text" id="chatInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+                <button class="mic-btn" id="micBtn" title="Hold to record voice note">🎙️</button>
                 <button onclick="sendChatMessage()">Send</button>
             </div>
         </div>

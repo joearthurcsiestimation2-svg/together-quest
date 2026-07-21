@@ -17,6 +17,9 @@ let players = {}, activeGame = "hub", activeRaceType = "";
 let countdownTimer, isGameRunning = false;
 let isChatExpanded = false;
 
+// Audio Recording Engine Vars
+let mediaRecorder, audioChunks = [], isRecording = false;
+
 // Wheel Animation Vars
 let wheelAngle = 0, isWheelSpinning = false;
 
@@ -61,6 +64,8 @@ window.addEventListener('load', () => {
     canvas = document.getElementById('gameCanvas');
     ctx = canvas.getContext('2d');
     canvas.addEventListener('pointerdown', handleCanvasClick);
+
+    setupVoiceRecorder();
 
     const savedSession = sessionStorage.getItem('tq_session');
     if (savedSession) {
@@ -138,7 +143,7 @@ function attachFirebaseListeners() {
 
     chatRef.on('child_added', (snapshot) => {
         const msg = snapshot.val();
-        appendChatMessage(msg.sender, msg.text);
+        appendChatMessage(msg.sender, msg.text, msg.audio);
     });
 }
 
@@ -295,10 +300,9 @@ function playTTT(idx) {
             cells.forEach((c, i) => { if(c.innerText === "") emptyIdxs.push(i); });
             if(emptyIdxs.length === 0) return;
             
-            // HUMAN-BALANCED AI: Hard mode won't always block 100% perfectly
             let aiPick;
             if (diff === 'hard') {
-                const mistakeChance = Math.random() < 0.25; // 25% chance of slight human error
+                const mistakeChance = Math.random() < 0.25;
                 aiPick = (!mistakeChance && (findWinningMove(cells, "⭕") ?? findWinningMove(cells, "❌"))) ?? emptyIdxs[Math.floor(Math.random() * emptyIdxs.length)];
             } else {
                 aiPick = emptyIdxs[Math.floor(Math.random() * emptyIdxs.length)];
@@ -385,7 +389,7 @@ function checkRPSResult() {
     }
 }
 
-// ==================== [3] CANVAS GRAPHICS ENGINE (NORMALIZED SMART AI) ====================
+// ==================== [3] CANVAS GRAPHICS ENGINE ====================
 function initGraphicsEngine(type) {
     targets = []; particles = [];
     myScore = 0; opponentScore = 0; timeRemaining = 30;
@@ -417,7 +421,6 @@ function initGraphicsEngine(type) {
             spawnTarget(type, diff);
         }
 
-        // BALANCED AI: Hard mode reduced from 0.07 to 0.032 to make it beatable
         let aiHitChance = diff === 'easy' ? 0.012 : diff === 'medium' ? 0.022 : 0.032;
         if (isSinglePlayer && Math.random() < aiHitChance) {
             if (targets.length > 0) {
@@ -531,7 +534,6 @@ function spinTDWheel() {
     btn.disabled = true;
     document.getElementById('td-display-card').innerText = "Wheel is spinning... 🌀";
 
-    // Random Rotations (5 to 10 full turns + random offset)
     const randomTurns = 360 * (5 + Math.floor(Math.random() * 5));
     const randomDegree = Math.floor(Math.random() * 360);
     wheelAngle += randomTurns + randomDegree;
@@ -543,9 +545,7 @@ function spinTDWheel() {
         isWheelSpinning = false;
         btn.disabled = false;
 
-        // Calculate landed segment
         const actualDeg = wheelAngle % 360;
-        // 0-90: Truth, 90-180: Dare, 180-270: Truth, 270-360: Dare
         const choice = (actualDeg >= 0 && actualDeg < 90) || (actualDeg >= 180 && actualDeg < 270) ? 'truth' : 'dare';
 
         const arr = choice === 'truth' ? truthList : dareList;
@@ -559,7 +559,77 @@ function spinTDWheel() {
     }, 3000);
 }
 
-// ==================== [5] FLOATING LIVE CHAT SYSTEM ====================
+// ==================== [5] VOICE RECORDER & LIVE CHAT ENGINE ====================
+function setupVoiceRecorder() {
+    const micBtn = document.getElementById('micBtn');
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        micBtn.style.display = 'none';
+        return;
+    }
+
+    const startRecording = () => {
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const reader = new FileReader();
+                reader.readAsDataURL(audioBlob);
+                reader.onloadend = () => {
+                    const base64Audio = reader.result;
+                    if (isSinglePlayer) {
+                        appendChatMessage(myName, "", base64Audio);
+                        triggerAIVoiceReply();
+                    } else {
+                        chatRef.push({ sender: myName, text: "", audio: base64Audio });
+                    }
+                };
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            micBtn.classList.add('recording');
+        }).catch(err => alert("Microphone Permission Denied!"));
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorder && isRecording) {
+            mediaRecorder.stop();
+            isRecording = false;
+            micBtn.classList.remove('recording');
+        }
+    };
+
+    micBtn.addEventListener('mousedown', startRecording);
+    micBtn.addEventListener('mouseup', stopRecording);
+    micBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startRecording(); });
+    micBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopRecording(); });
+}
+
+function triggerAIVoiceReply() {
+    setTimeout(() => {
+        const replies = [
+            "Wah! Aap ki voice note boht zabardast hai! 🎮",
+            "Main aap ka voice note sun chuka hoon, game par dhyan do! 🔥",
+            "Aap ki baatein sun kar maza aya, chalo ab kheleim! 😂"
+        ];
+        const textReply = replies[Math.floor(Math.random() * replies.length)];
+        appendChatMessage("Smart AI 🤖", textReply);
+
+        // Text-to-Speech Voice Output for Smart AI
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(textReply);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.1;
+            window.speechSynthesis.speak(utterance);
+        }
+    }, 1200);
+}
+
 function toggleChatExpand() {
     isChatExpanded = !isChatExpanded;
     const body = document.getElementById('chat-body');
@@ -582,22 +652,34 @@ function sendChatMessage() {
         appendChatMessage(myName, txt);
         input.value = "";
         
-        // Auto AI Response
         setTimeout(() => {
             const aiReplies = ["Good move! 🎮", "Haha sahi keh rahe ho! 😂", "Main jeet ke rahunga! 🔥", "Zabardast! ✨"];
-            appendChatMessage("Smart AI 🤖", aiReplies[Math.floor(Math.random() * aiReplies.length)]);
+            const replyText = aiReplies[Math.floor(Math.random() * aiReplies.length)];
+            appendChatMessage("Smart AI 🤖", replyText);
+            
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(replyText);
+                window.speechSynthesis.speak(utterance);
+            }
         }, 1000);
     } else {
-        chatRef.push({ sender: myName, text: txt });
+        chatRef.push({ sender: myName, text: txt, audio: "" });
         input.value = "";
     }
 }
 
-function appendChatMessage(sender, text) {
+function appendChatMessage(sender, text, audioUrl) {
     const box = document.getElementById('chat-messages');
     const div = document.createElement('div');
     div.className = 'chat-msg';
-    div.innerHTML = `<b>${sender}:</b> ${text}`;
+
+    let content = `<b>${sender}:</b> `;
+    if (text) content += text;
+    if (audioUrl) {
+        content += `<br/><audio controls src="${audioUrl}"></audio>`;
+    }
+
+    div.innerHTML = content;
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
 }
