@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Together Quest Mega Arcade v4.0 Ultimate 🎮✨</title>
+    <title>Together Quest Ultimate Arcade v5.0 🎮✨</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -123,37 +123,12 @@
             display: flex; align-items: center; justify-content: center; font-size: 14px;
         }
 
-        /* Mystery Box Styles */
-        .box-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
-        .m-box {
-            background: rgba(255,255,255,0.08); height: 80px; border-radius: 18px;
-            font-size: 38px; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; border: 1px solid rgba(255,255,255,0.15); transition: 0.3s;
-        }
-        .m-box:hover { transform: scale(1.05); border-color: var(--accent); }
+        /* Snake Controls Grid */
+        .snake-dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: 180px; margin: 12px auto 0 auto; }
 
-        /* Big Red Button */
-        .red-btn-container { margin: 30px auto; width: 140px; height: 140px; }
-        .big-red-btn {
-            width: 100%; height: 100%; border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, #ff4d4d, #990000);
-            border: 6px solid #ff9999; box-shadow: 0 15px 35px rgba(255, 0, 0, 0.6);
-            font-size: 45px; cursor: pointer; transition: transform 0.1s; display: flex; align-items: center; justify-content: center;
-        }
-        .big-red-btn:active { transform: scale(0.92); box-shadow: 0 5px 15px rgba(255, 0, 0, 0.8); }
-
-        /* Drawing Canvas */
-        #drawCanvas { background: #fff; border-radius: 16px; width: 100%; height: 240px; touch-action: none; cursor: crosshair; }
-        .draw-tools { display: flex; gap: 8px; justify-content: center; margin: 10px 0; }
-        .color-dot { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid #fff; }
-
-        /* Choice Buttons */
-        .choice-btn-grid { display: flex; gap: 10px; margin: 15px 0; }
-        .choice-card { flex: 1; padding: 20px 10px; background: rgba(255,255,255,0.08); border-radius: 18px; cursor: pointer; font-size: 16px; border: 1px solid rgba(255,255,255,0.15); }
-        .choice-card:hover { border-color: var(--accent); background: rgba(255,255,255,0.15); }
-
-        /* Daily Quest Board */
-        .quest-item { background: rgba(255,255,255,0.06); padding: 12px; border-radius: 14px; margin: 8px 0; text-align: left; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+        /* Memory Card Grid */
+        .card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 15px 0; }
+        .mem-card { background: rgba(255,255,255,0.08); height: 60px; border-radius: 12px; font-size: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.15); }
 
         /* Floating Live Chat Box UI */
         #chat-widget {
@@ -228,7 +203,7 @@
     <!-- Login Lobby -->
     <div id="lobby-screen" class="container">
         <h1>Together Quest ✨</h1>
-        <p style="font-size:14px; color:#a0a5c0; margin-bottom:20px;">Arcade Suite v4.0 Ultimate</p>
+        <p style="font-size:14px; color:#a0a5c0; margin-bottom:20px;">Couple Arcade Suite v5.0 Ultimate</p>
         
         <select id="gameModeType" onchange="toggleRoomInput()">
             <option value="single">👤 Single Player (Vs Smart AI)</option>
@@ -261,19 +236,20 @@
         </div>
 
         <div class="hub-grid">
+            <!-- ORIGINAL CLASSICS -->
             <div class="game-card" onclick="openGame('ttt')"><span>❌</span>Tic Tac Toe</div>
             <div class="game-card" onclick="openGame('rps')"><span>✊</span>RPS Battle</div>
             <div class="game-card" onclick="openGame('balloon')"><span>🎈</span>Balloon Pop</div>
             <div class="game-card" onclick="openGame('hearts')"><span>❤️</span>Catch Hearts</div>
             <div class="game-card" onclick="openGame('coins')"><span>🪙</span>Speed Coins</div>
             <div class="game-card" onclick="openGame('td')"><span>🎯</span>Truth or Dare</div>
-            <!-- NAYI GAMES ADDED -->
-            <div class="game-card" onclick="openGame('mystery')"><span>🎁</span>Mystery Box</div>
-            <div class="game-card" onclick="openGame('whoknows')"><span>🧠</span>Who Knows Better</div>
-            <div class="game-card" onclick="openGame('secret')"><span>🔒</span>Secret Choice</div>
-            <div class="game-card" onclick="openGame('draw')"><span>🎨</span>Draw & Guess</div>
-            <div class="game-card" onclick="openGame('redbtn')"><span>🔴</span>Red Button</div>
-            <div class="game-card" onclick="openGame('quests')"><span>🐥</span>Chuza Quests</div>
+            <!-- NEW COUPLE & MULTIPLAYER GAMES -->
+            <div class="game-card" onclick="openGame('snake')"><span>🐍</span>Snake Duo</div>
+            <div class="game-card" onclick="openGame('pong')"><span>🏓</span>Ping Pong</div>
+            <div class="game-card" onclick="openGame('ludo')"><span>🎲</span>Ludo Mini</div>
+            <div class="game-card" onclick="openGame('bomb')"><span>💣</span>Bomb Pass</div>
+            <div class="game-card" onclick="openGame('brick')"><span>🧱</span>Brick Smash</div>
+            <div class="game-card" onclick="openGame('memory')"><span>🎴</span>Memory Match</div>
         </div>
     </div>
 
@@ -303,7 +279,7 @@
         <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:20px;">Back to Hub 🚪</button>
     </div>
 
-    <!-- 3. Canvas Engine Screen (Balloon, Hearts, Coins) -->
+    <!-- 3. Canvas Engine Screen (Balloon, Hearts, Coins, Pong, Brick) -->
     <div id="game-race" class="container hidden">
         <button class="btn-rule" onclick="showRules(activeRaceType)">Rules 📜</button>
         <h2 id="race-title">Graphic Arena</h2>
@@ -333,81 +309,46 @@
         <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:8px;">Back to Hub 🚪</button>
     </div>
 
-    <!-- 5. MYSTERY BOX SCREEN -->
-    <div id="game-mystery" class="container hidden">
-        <button class="btn-rule" onclick="showRules('mystery')">Rules 📜</button>
-        <h2>📦 Chuza's Mystery Vault 📦</h2>
-        <div id="mystery-status" style="color:var(--accent); margin-bottom:10px;">Select a box to unlock rewards!</div>
-        <div class="box-grid">
-            <div class="m-box" onclick="openMysteryBox(0)">🎁</div>
-            <div class="m-box" onclick="openMysteryBox(1)">🎁</div>
-            <div class="m-box" onclick="openMysteryBox(2)">🎁</div>
-            <div class="m-box" onclick="openMysteryBox(3)">🎁</div>
-            <div class="m-box" onclick="openMysteryBox(4)">✨</div>
-            <div class="m-box" onclick="openMysteryBox(5)">🎁</div>
+    <!-- 5. SNAKE DUO SCREEN -->
+    <div id="game-snake" class="container hidden">
+        <button class="btn-rule" onclick="showRules('snake')">Rules 📜</button>
+        <h2>🐍 Nokia Snake Duo 🍎</h2>
+        <canvas id="snakeCanvas" width="360" height="240" style="background:#000; border-radius:16px; border:2px solid #00ffaa;"></canvas>
+        <div class="snake-dpad">
+            <div></div><button onclick="setSnakeDir('UP')" style="padding:10px;">⬆️</button><div></div>
+            <button onclick="setSnakeDir('LEFT')" style="padding:10px;">⬅️</button><div></div><button onclick="setSnakeDir('RIGHT')" style="padding:10px;">➡️</button>
+            <div></div><button onclick="setSnakeDir('DOWN')" style="padding:10px;">⬇️</button><div></div>
         </div>
-        <div id="mystery-result" class="td-card">Select any mystery box above!</div>
-        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1);">Back to Hub 🚪</button>
-    </div>
-
-    <!-- 6. WHO KNOWS BETTER SCREEN -->
-    <div id="game-whoknows" class="container hidden">
-        <button class="btn-rule" onclick="showRules('whoknows')">Rules 📜</button>
-        <h2>🧠 Who Knows Better? 🦉</h2>
-        <div id="wk-question" style="font-size:16px; font-weight:700; margin:15px 0; color:var(--accent);">Loading question...</div>
-        <div id="wk-options"></div>
-        <div id="wk-result" class="td-card" style="margin-top:10px;">Pick your answer!</div>
         <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:10px;">Back to Hub 🚪</button>
     </div>
 
-    <!-- 7. SECRET CHOICE SCREEN -->
-    <div id="game-secret" class="container hidden">
-        <button class="btn-rule" onclick="showRules('secret')">Rules 📜</button>
-        <h2>🔒 Secret Choice 🐥</h2>
-        <div id="secret-status" style="margin-bottom:15px; color:var(--accent);">Match choices with your partner!</div>
-        <div id="secret-options" class="choice-btn-grid"></div>
-        <div id="secret-result" class="td-card">Pick one option!</div>
+    <!-- 6. LUDO MINI SCREEN -->
+    <div id="game-ludo" class="container hidden">
+        <button class="btn-rule" onclick="showRules('ludo')">Rules 📜</button>
+        <h2>🎲 Ludo Mini Duel 🏆</h2>
+        <div id="ludo-status" style="color:var(--accent); font-weight:bold; margin-bottom:15px;">Roll the Dice!</div>
+        <div style="font-size:70px; margin:20px 0;" id="dice-display">🎲</div>
+        <button onclick="rollLudoDice()" style="background:linear-gradient(135deg, #e17055, #d63031); font-size:18px;">ROLL DICE 🎲</button>
+        <div id="ludo-progress" class="td-card">Your Tokens: 0/10 Steps</div>
+        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1);">Back to Hub 🚪</button>
+    </div>
+
+    <!-- 7. BOMB PASS SCREEN -->
+    <div id="game-bomb" class="container hidden">
+        <button class="btn-rule" onclick="showRules('bomb')">Rules 📜</button>
+        <h2>💣 Hot Potato Bomb 💣</h2>
+        <div id="bomb-holder" style="font-size:20px; color:var(--accent); margin-bottom:10px;">Bomb with: YOU!</div>
+        <div style="font-size:90px; margin:20px 0;" id="bomb-icon">💣</div>
+        <button onclick="passBomb()" style="background:linear-gradient(135deg, #d63031, #ff7675); font-size:18px;">PASS BOMB 💥</button>
         <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:10px;">Back to Hub 🚪</button>
     </div>
 
-    <!-- 8. DRAW & GUESS SCREEN -->
-    <div id="game-draw" class="container hidden">
-        <button class="btn-rule" onclick="showRules('draw')">Rules 📜</button>
-        <h2>🎨 Draw & Guess Carnival 🎨</h2>
-        <div id="draw-word" style="color:var(--accent); font-weight:800; font-size:18px; margin-bottom:8px;">Word: APPLE</div>
-        <canvas id="drawCanvas" width="380" height="240"></canvas>
-        <div class="draw-tools">
-            <div class="color-dot" style="background:#000;" onclick="setDrawColor('#000')"></div>
-            <div class="color-dot" style="background:#ff3366;" onclick="setDrawColor('#ff3366')"></div>
-            <div class="color-dot" style="background:#00b894;" onclick="setDrawColor('#00b894')"></div>
-            <div class="color-dot" style="background:#ffd700;" onclick="setDrawColor('#ffd700')"></div>
-            <button onclick="clearDrawCanvas()" style="width:auto; padding:4px 10px; margin:0; font-size:12px;">Clear 🗑️</button>
-        </div>
+    <!-- 8. MEMORY MATCH SCREEN -->
+    <div id="game-memory" class="container hidden">
+        <button class="btn-rule" onclick="showRules('memory')">Rules 📜</button>
+        <h2>🎴 Memory Card Match 🎴</h2>
+        <div class="card-grid" id="memoryGrid"></div>
         <button onclick="backToHub()" style="background:rgba(255,255,255,0.1);">Back to Hub 🚪</button>
-    </div>
-
-    <!-- 9. RED BUTTON CHAOS SCREEN -->
-    <div id="game-redbtn" class="container hidden">
-        <button class="btn-rule" onclick="showRules('redbtn')">Rules 📜</button>
-        <h2>🔴 Mysterious Red Button 🔴</h2>
-        <p style="font-size:13px; color:#a0a5c0;">Dabao aur dekho kya hota hai!</p>
-        <div class="red-btn-container">
-            <div class="big-red-btn" onclick="pressRedButton()">🔴</div>
-        </div>
-        <div id="redbtn-event" class="td-card">Press the Button!</div>
-        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1);">Back to Hub 🚪</button>
-    </div>
-
-    <!-- 10. CHUZA'S DAILY QUESTS SCREEN -->
-    <div id="game-quests" class="container hidden">
-        <button class="btn-rule" onclick="showRules('quests')">Rules 📜</button>
-        <h2>🐥 Chuza's Daily Quests 🌟</h2>
-        <div id="quest-list">
-            <div class="quest-item"><span>🪙 Collect 20 Coins</span><button style="width:auto; padding:4px 8px; margin:0; font-size:11px;" onclick="claimQuest(this)">Claim</button></div>
-            <div class="quest-item"><span>🦋 Catch 5 Butterflies</span><button style="width:auto; padding:4px 8px; margin:0; font-size:11px;" onclick="claimQuest(this)">Claim</button></div>
-            <div class="quest-item"><span>📸 Take 3 Game Screenshots</span><button style="width:auto; padding:4px 8px; margin:0; font-size:11px;" onclick="claimQuest(this)">Claim</button></div>
-        </div>
-        <button onclick="backToHub()" style="background:rgba(255,255,255,0.1); margin-top:15px;">Back to Hub 🚪</button>
     </div>
 
     <!-- Floating Live Chat Suite -->

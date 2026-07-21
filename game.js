@@ -28,11 +28,15 @@ const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 let wheelAngle = 0, isWheelSpinning = false;
 
 // 2D Canvas Engine
-let canvas, ctx, animFrameId, targets = [], particles = [];
+let canvas, ctx, animFrameId, targets = [];
 let myScore = 0, opponentScore = 0, timeRemaining = 30;
 
-// Drawing Canvas
-let drawCanvas, drawCtx, isDrawing = false, currentColor = "#000";
+// Snake Engine
+let snakeCanvas, snakeCtx, snakeTimer;
+let snake = [{x: 10, y: 10}], snakeDir = "RIGHT", apple = {x: 5, y: 5};
+
+// Ludo & Bomb State
+let ludoScore = 0, hasBomb = true, bombTimer;
 
 const rulesBook = {
     ttt: "Tic Tac Toe:\n- Connect 3 horizontally, vertically, or diagonally to WIN!",
@@ -41,12 +45,12 @@ const rulesBook = {
     hearts: "Catch Hearts:\n- Catch falling glowing hearts!",
     coins: "Speed Coins:\n- Tap coins quickly before they vanish.",
     td: "Truth or Dare:\n- Spin the wheel when it's your turn!",
-    mystery: "Mystery Box:\n- Pick a glowing box to win coins, hats, or legendary items!",
-    whoknows: "Who Knows Better:\n- Guess each other's preferences to build match streaks!",
-    secret: "Secret Choice:\n- Choose options secretly. Same choice = Bonus Hearts!",
-    draw: "Draw & Guess:\n- Draw the given word on canvas or guess what your partner draws!",
-    redbtn: "Red Button:\n- Press the big red button to trigger wild random mini-events!",
-    quests: "Chuza Quests:\n- Complete daily tasks to earn rewards and accessories!"
+    snake: "Nokia Snake Duo:\n- Eat apples to grow, avoid crashing into walls!",
+    pong: "Ping Pong:\n- Tap screen to move paddle and bounce ball back!",
+    ludo: "Ludo Mini:\n- Roll dice and be the first to reach 20 steps!",
+    bomb: "Bomb Pass:\n- Pass the ticking bomb before it explodes on you!",
+    brick: "Brick Smash:\n- Break all top bricks with bouncing ball!",
+    memory: "Memory Match:\n- Match pairs of cute emoji cards!"
 };
 
 const truthList = [
@@ -74,9 +78,8 @@ window.addEventListener('load', () => {
     ctx = canvas.getContext('2d');
     canvas.addEventListener('pointerdown', handleCanvasClick);
 
-    drawCanvas = document.getElementById('drawCanvas');
-    drawCtx = drawCanvas.getContext('2d');
-    setupDrawingEngine();
+    snakeCanvas = document.getElementById('snakeCanvas');
+    snakeCtx = snakeCanvas.getContext('2d');
 
     const savedSession = sessionStorage.getItem('tq_session');
     if (savedSession) {
@@ -183,11 +186,12 @@ function switchLayout(screen) {
     if (screen === 'hub') {
         document.getElementById('hub-screen').classList.remove('hidden');
         isGameRunning = false;
+        clearInterval(snakeTimer);
         cancelAnimationFrame(animFrameId);
         return;
     }
 
-    if (['balloon', 'hearts', 'coins'].includes(screen)) {
+    if (['balloon', 'hearts', 'coins', 'pong', 'brick'].includes(screen)) {
         activeRaceType = screen;
         document.getElementById('game-race').classList.remove('hidden');
         document.getElementById('race-title').innerText = screen.toUpperCase() + " ARENA";
@@ -198,10 +202,11 @@ function switchLayout(screen) {
     startPrepCountdown(() => {
         isGameRunning = true;
         if (screen === 'ttt') initTTT();
-        if (['balloon', 'hearts', 'coins'].includes(screen)) initGraphicsEngine(screen);
+        if (['balloon', 'hearts', 'coins', 'pong', 'brick'].includes(screen)) initGraphicsEngine(screen);
         if (screen === 'td') initTDGame();
-        if (screen === 'whoknows') initWhoKnowsGame();
-        if (screen === 'secret') initSecretGame();
+        if (screen === 'snake') initSnakeGame();
+        if (screen === 'bomb') initBombGame();
+        if (screen === 'memory') initMemoryGame();
     });
 }
 
@@ -226,6 +231,8 @@ function startPrepCountdown(callback) {
 function triggerGameEnd(didIWin, message) {
     isGameRunning = false;
     clearInterval(countdownTimer);
+    clearInterval(snakeTimer);
+    clearTimeout(bombTimer);
     cancelAnimationFrame(animFrameId);
 
     const modal = document.getElementById('result-modal');
@@ -257,6 +264,8 @@ function backToHub() {
     
     isGameRunning = false;
     clearInterval(countdownTimer);
+    clearInterval(snakeTimer);
+    clearTimeout(bombTimer);
     cancelAnimationFrame(animFrameId);
 
     if (!isSinglePlayer && roomRef) roomRef.update({ activeScreen: 'hub' });
@@ -270,6 +279,8 @@ function exitToMainMenu() {
 
         isGameRunning = false;
         clearInterval(countdownTimer);
+        clearInterval(snakeTimer);
+        clearTimeout(bombTimer);
         cancelAnimationFrame(animFrameId);
 
         document.getElementById('result-modal').classList.add('hidden');
@@ -368,7 +379,7 @@ function playRPS(move) {
         else triggerGameEnd(false, `You: ${move} vs AI: ${aiMove}`);
     } else {
         playerRef.update({ currentMove: move });
-        document.getElementById('rps-status').innerText = "Move Locked! 🔒 Waiting for opponent...";
+        document.getElementById('rps-status').innerText = "Move Locked! 🔒 Waiting for partner...";
     }
 }
 
@@ -384,9 +395,9 @@ function checkRPSResult() {
     }
 }
 
-// --- [3] CANVAS ENGINE (Balloon, Hearts, Coins) ---
+// --- [3] CANVAS ARCADE ENGINE ---
 function initGraphicsEngine(type) {
-    targets = []; particles = []; myScore = 0; opponentScore = 0; timeRemaining = 30;
+    targets = []; myScore = 0; opponentScore = 0; timeRemaining = 30;
     document.getElementById('my-race-score').innerText = `You: ${myScore}`;
     document.getElementById('partner-race-score').innerText = isSinglePlayer ? `AI: ${opponentScore}` : "Opponent: 0";
 
@@ -419,7 +430,7 @@ function initGraphicsEngine(type) {
 }
 
 function spawnTarget(type) {
-    let symbol = type === 'balloon' ? '🎈' : type === 'hearts' ? '❤️' : '🪙';
+    let symbol = type === 'balloon' ? '🎈' : type === 'hearts' ? '❤️' : type === 'pong' ? '🏓' : '🪙';
     targets.push({
         x: Math.random() * (canvas.width - 60) + 30,
         y: type === 'balloon' ? canvas.height + 30 : -20,
@@ -469,82 +480,88 @@ function spinTDWheel() {
     }, 3000);
 }
 
-// --- [5] MYSTERY BOX ---
-function openMysteryBox(idx) {
-    const rewards = ["🪙 100 Coins!", "👒 Golden Crown!", "🧩 Legendary Puzzle Piece!", "🐥 Chuza Pet Item!", "⭐ Lucky Star Badge!", "🎨 Rainbow Brush!"];
-    const prize = rewards[Math.floor(Math.random() * rewards.length)];
-    document.getElementById('mystery-result').innerHTML = `<b>Box #${idx+1} Opened:</b><br/>You won ${prize}`;
+// --- [5] NOKIA SNAKE DUO ---
+function initSnakeGame() {
+    snake = [{x: 10, y: 10}, {x: 9, y: 10}];
+    snakeDir = "RIGHT";
+    apple = {x: 5, y: 5};
+    
+    clearInterval(snakeTimer);
+    snakeTimer = setInterval(() => {
+        if (!isGameRunning) return;
+        let head = {...snake[0]};
+        if (snakeDir === "UP") head.y--;
+        if (snakeDir === "DOWN") head.y++;
+        if (snakeDir === "LEFT") head.x--;
+        if (snakeDir === "RIGHT") head.x++;
+
+        if (head.x < 0 || head.x >= 18 || head.y < 0 || head.y >= 12) {
+            triggerGameEnd(false, "Snake crashed into boundary!");
+            return;
+        }
+
+        snake.unshift(head);
+        if (head.x === apple.x && head.y === apple.y) {
+            apple = {x: Math.floor(Math.random()*16), y: Math.floor(Math.random()*10)};
+        } else {
+            snake.pop();
+        }
+
+        // Draw Snake
+        snakeCtx.fillStyle = "#000";
+        snakeCtx.fillRect(0, 0, snakeCanvas.width, snakeCanvas.height);
+        snakeCtx.fillStyle = "#00ffaa";
+        snake.forEach(seg => snakeCtx.fillRect(seg.x*20, seg.y*20, 18, 18));
+        snakeCtx.fillStyle = "#ff3366";
+        snakeCtx.fillRect(apple.x*20, apple.y*20, 18, 18);
+    }, 150);
 }
 
-// --- [6] WHO KNOWS BETTER ---
-function initWhoKnowsGame() {
-    const qList = [
-        { q: "Favorite Beverage?", opts: ["☕ Tea", "🥤 Coffee"] },
-        { q: "Ideal Vacation?", opts: ["🏖️ Beach", "🏔️ Mountains"] },
-        { q: "Pet Choice?", opts: ["🐱 Cat", "🐶 Dog"] }
-    ];
-    const picked = qList[Math.floor(Math.random() * qList.length)];
-    document.getElementById('wk-question').innerText = picked.q;
-    const box = document.getElementById('wk-options');
-    box.innerHTML = "";
-    picked.opts.forEach(opt => {
-        const btn = document.createElement('button');
-        btn.innerText = opt;
-        btn.onclick = () => { document.getElementById('wk-result').innerText = `Aap ne pick kiya: ${opt}! Checking Partner Match... ✅`; };
-        box.appendChild(btn);
+function setSnakeDir(dir) { snakeDir = dir; }
+
+// --- [6] LUDO MINI DUEL ---
+function rollLudoDice() {
+    if(!isGameRunning) return;
+    const roll = Math.floor(Math.random() * 6) + 1;
+    document.getElementById('dice-display').innerText = ['🎲','⚀','⚁','⚂','⚃','⚄','⚅'][roll];
+    ludoScore += roll;
+    document.getElementById('ludo-progress').innerText = `Your Tokens: ${ludoScore}/20 Steps`;
+    if (ludoScore >= 20) {
+        triggerGameEnd(true, "Reached Ludo Victory Home!");
+    }
+}
+
+// --- [7] BOMB PASS ---
+function initBombGame() {
+    hasBomb = true;
+    document.getElementById('bomb-holder').innerText = "Bomb in hand: YOU!";
+    clearTimeout(bombTimer);
+    bombTimer = setTimeout(() => {
+        triggerGameEnd(!hasBomb, hasBomb ? "BOOM! Bomb exploded on you!" : "Phew! Passed the bomb in time!");
+    }, 8000 + Math.random() * 5000);
+}
+
+function passBomb() {
+    hasBomb = !hasBomb;
+    document.getElementById('bomb-holder').innerText = hasBomb ? "Bomb in hand: YOU!" : "Bomb Passed to Partner! 💣";
+}
+
+// --- [8] MEMORY MATCH ---
+function initMemoryGame() {
+    const emojis = ['🐱','🐶','🍕','🍔','⭐','💎','🐱','🐶','🍕','🍔','⭐','💎'];
+    emojis.sort(() => Math.random() - 0.5);
+    const grid = document.getElementById('memoryGrid');
+    grid.innerHTML = "";
+    emojis.forEach((e, idx) => {
+        const c = document.createElement('div');
+        c.className = 'mem-card';
+        c.innerText = '❓';
+        c.onclick = () => { c.innerText = e; };
+        grid.appendChild(c);
     });
 }
 
-// --- [7] SECRET CHOICE ---
-function initSecretGame() {
-    const choices = [["🍕 Pizza", "🍔 Burger"], ["🌅 Sunrise", "🌙 Night"], ["🐱 Cat", "🐶 Dog"]];
-    const pair = choices[Math.floor(Math.random() * choices.length)];
-    const box = document.getElementById('secret-options');
-    box.innerHTML = "";
-    pair.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'choice-card';
-        div.innerText = item;
-        div.onclick = () => { document.getElementById('secret-result').innerText = `Choice Locked: ${item}! 🔒 Hearts Multiplier Active! ❤️`; };
-        box.appendChild(div);
-    });
-}
-
-// --- [8] DRAW & GUESS ENGINE ---
-function setupDrawingEngine() {
-    let painting = false;
-    drawCanvas.addEventListener('mousedown', () => painting = true);
-    drawCanvas.addEventListener('mouseup', () => { painting = false; drawCtx.beginPath(); });
-    drawCanvas.addEventListener('mousemove', (e) => {
-        if (!painting) return;
-        const rect = drawCanvas.getBoundingClientRect();
-        drawCtx.lineWidth = 4;
-        drawCtx.lineCap = 'round';
-        drawCtx.strokeStyle = currentColor;
-        drawCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-        drawCtx.stroke();
-        drawCtx.beginPath();
-        drawCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-    });
-}
-function setDrawColor(c) { currentColor = c; }
-function clearDrawCanvas() { drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height); }
-
-// --- [9] RED BUTTON CHAOS ---
-function pressRedButton() {
-    const events = ["🎈 Balloon Rain Event!", "🧩 30-Second Puzzle Sprint!", "🪙 Gold Coin Shower!", "🦋 Butterfly Catching!", "🌈 Rainbow Sky Bonus!"];
-    const picked = events[Math.floor(Math.random() * events.length)];
-    document.getElementById('redbtn-event').innerText = `CHAOS EVENT TRIGGERED:\n${picked}`;
-}
-
-// --- [10] CHUZA DAILY QUESTS ---
-function claimQuest(btn) {
-    btn.innerText = "Completed ✅";
-    btn.disabled = true;
-    btn.style.background = "#00b894";
-}
-
-// --- [11] CHAT, VOICE NOTES & LIVE CALL ---
+// --- [9] CHAT, VOICE NOTES & LIVE CALL ---
 function toggleVoiceRecording() {
     const micBtn = document.getElementById('micBtn');
     if (!isRecording) {
