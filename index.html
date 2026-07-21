@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Together Quest Pro Arcade 🎮❤️</title>
-    <!-- Firebase Standard SDKs -->
+    <title>Together Quest Mega Arcade 🎮❤️</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -138,26 +137,26 @@
     <!-- Lobby Login -->
     <div id="lobby-screen" class="container">
         <h1>Together Quest 🎮</h1>
-        <p style="font-size:14px; color:#cbd5e1;">Select Mode & Enter Code</p>
+        <p style="font-size:14px; color:#cbd5e1;">Select Mode to Begin</p>
         
-        <select id="gameModeType">
-            <option value="multi">👥 Online Couple / Partner Mode</option>
+        <select id="gameModeType" onchange="toggleRoomInput()">
             <option value="single">👤 Single Player (Vs Smart AI)</option>
+            <option value="multi">👥 Online Couple / Partner Mode</option>
         </select>
 
         <input type="text" id="playerName" placeholder="Apna Name" maxlength="10">
-        <input type="text" id="roomCode" placeholder="6-Digit Room Code" maxlength="6">
+        <input type="text" id="roomCode" class="hidden" placeholder="6-Digit Room Code" maxlength="6">
         <button id="joinBtn">Enter Arcade 🚀</button>
     </div>
 
     <!-- Arcade Hub -->
     <div id="hub-screen" class="container hidden">
         <h2 id="welcome-msg">Arcade Hub</h2>
-        <div style="font-size:13px; color:var(--accent);" id="hub-status">Waiting...</div>
+        <div style="font-size:13px; color:var(--accent);" id="hub-status">Mode Ready</div>
 
         <!-- Difficulty Level Selector -->
         <div style="margin:15px 0 5px 0; text-align:left;">
-            <label style="font-size:12px; color:#94a3b8;">Select Difficulty Level:</label>
+            <label style="font-size:12px; color:#94a3b8;">Difficulty Level:</label>
             <select id="difficultySelect">
                 <option value="easy">🟢 Easy Mode</option>
                 <option value="medium" selected>🟡 Medium Mode</option>
@@ -197,7 +196,7 @@
     <div id="game-rps" class="container hidden">
         <button class="btn-rule" onclick="showRules('rps')">Rules 📜</button>
         <h2>✊ Rock Paper Scissors ✌️</h2>
-        <div id="rps-status" style="color:var(--accent); font-weight:bold;">Lock your move!</div>
+        <div id="rps-status" style="color:var(--accent); font-weight:bold;">Choose your move!</div>
         <div style="display:flex; justify-content:space-around; margin:20px 0;">
             <button onclick="playRPS('✊')" style="font-size:30px; width:70px; height:70px; border-radius:50%;">✊</button>
             <button onclick="playRPS('✋')" style="font-size:30px; width:70px; height:70px; border-radius:50%;">✋</button>

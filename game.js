@@ -11,21 +11,32 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-let playerId, myName, currentRoom, isSinglePlayer = false;
+let playerId, myName, currentRoom, isSinglePlayer = true;
 let roomRef, playerRef;
 let players = {}, activeGame = "hub", activeRaceType = "";
-let raceInterval, countdownTimer, isGameRunning = false;
+let raceInterval, countdownTimer, aiTimer, isGameRunning = false;
 
 const rulesBook = {
     ttt: "Tic Tac Toe Rules:\n- Take turns placing ❌ or ⭕.\n- Complete 3 in a row horizontally, vertically, or diagonally to WIN!",
     rps: "Rock Paper Scissors Rules:\n- Rock beats Scissors ✌️\n- Paper beats Rock ✊\n- Scissors beats Paper ✋",
     balloon: "Balloon Pop Race:\n- Tap floating balloons fast before they escape.\n- Highest score when time runs out WINS!",
-    hearts: "Catch Hearts:\n- Falling hearts speed depends on difficulty level.\n- Tap them to collect points!",
+    hearts: "Catch Hearts:\n- Tap the falling hearts before they disappear!\n- AI speed matches selected difficulty level.",
     coins: "Speed Coins:\n- Coins pop randomly and disappear quickly!\n- Tap faster than your opponent."
 };
 
-// --- REFRESH PROTECTION SYSTEM ---
+function toggleRoomInput() {
+    const mode = document.getElementById('gameModeType').value;
+    const roomInp = document.getElementById('roomCode');
+    if (mode === 'multi') {
+        roomInp.classList.remove('hidden');
+    } else {
+        roomInp.classList.add('hidden');
+    }
+}
+
+// Session Lock Protection
 window.addEventListener('load', () => {
+    toggleRoomInput();
     const savedSession = sessionStorage.getItem('tq_session');
     if (savedSession) {
         const data = JSON.parse(savedSession);
@@ -48,13 +59,12 @@ document.getElementById('joinBtn').addEventListener('click', () => {
     isSinglePlayer = document.getElementById('gameModeType').value === 'single';
 
     if (!myName || (!isSinglePlayer && !currentRoom)) {
-        alert("Please enter Name and Room Code!");
+        alert("Please fill required fields!");
         return;
     }
 
     playerId = 'p_' + Math.random().toString(36).substr(2, 5);
     
-    // Save state locally to prevent reload kickout
     sessionStorage.setItem('tq_session', JSON.stringify({
         name: myName, room: currentRoom, isSingle: isSinglePlayer, id: playerId
     }));
@@ -66,7 +76,7 @@ document.getElementById('joinBtn').addEventListener('click', () => {
     if (isSinglePlayer) {
         players[playerId] = { name: myName, score: 0 };
         players['bot'] = { name: "Smart AI 🤖", score: 0 };
-        document.getElementById('hub-status').innerText = "Single Player vs AI Mode Active!";
+        document.getElementById('hub-status').innerText = "Single Player vs AI Active!";
     } else {
         attachFirebaseListeners();
     }
@@ -79,7 +89,6 @@ function attachFirebaseListeners() {
     playerRef.set({ id: playerId, name: myName, score: 0 });
     playerRef.onDisconnect().remove();
 
-    // Player Leave / Disconnect Detector
     roomRef.child('players').on('value', (snapshot) => {
         players = snapshot.val() || {};
         const pKeys = Object.keys(players);
@@ -89,7 +98,6 @@ function attachFirebaseListeners() {
             : "Waiting for partner to join...";
 
         if (pKeys.length === 1 && activeGame !== "hub" && isGameRunning) {
-            // Opponent Left - Automatic Winner
             triggerGameEnd(true, "Opponent Left the Game!");
         }
         updateRaceScoreboard();
@@ -110,10 +118,9 @@ function attachFirebaseListeners() {
     });
 }
 
-// --- COUNTDOWN & LIFECYCLE CONTROLLER ---
 function openGame(gameType) {
     if (!isSinglePlayer && Object.keys(players).length < 2) {
-        alert("Waiting for partner to connect first!");
+        alert("Waiting for partner to connect!");
         return;
     }
     
@@ -130,6 +137,7 @@ function switchLayout(screen) {
         document.getElementById('hub-screen').classList.remove('hidden');
         isGameRunning = false;
         clearInterval(raceInterval);
+        clearInterval(aiTimer);
         return;
     }
 
@@ -168,11 +176,11 @@ function startPrepCountdown(callback) {
     }, 800);
 }
 
-// --- WIN / LOSE POPUP MODAL ---
 function triggerGameEnd(didIWin, message) {
     isGameRunning = false;
     clearInterval(raceInterval);
     clearInterval(countdownTimer);
+    clearInterval(aiTimer);
 
     const modal = document.getElementById('result-modal');
     const title = document.getElementById('modal-status-title');
@@ -205,19 +213,18 @@ function backToHub() {
     else switchLayout('hub');
 }
 
-// --- RULES SYSTEM ---
 function showRules(type) {
     document.getElementById('rules-text').innerText = rulesBook[type] || "Play fair & enjoy!";
     document.getElementById('rules-modal').classList.remove('hidden');
 }
 function closeRules() { document.getElementById('rules-modal').classList.add('hidden'); }
 
-// ==================== [1] TIC TAC TOE ====================
+// ==================== [1] TIC TAC TOE (AI & MULTI) ====================
 function initTTT() {
+    renderTTTBoard(Array(9).fill(""));
     if (!isSinglePlayer) {
         roomRef.child('ttt').set({ board: Array(9).fill(""), turn: Object.keys(players)[0] });
     } else {
-        renderTTTBoard(Array(9).fill(""));
         document.getElementById('ttt-status').innerText = "Your Turn! ⚡";
     }
 }
@@ -229,18 +236,34 @@ function playTTT(idx) {
         let cells = document.querySelectorAll('#game-ttt .cell');
         if (cells[idx].innerText !== "") return;
         cells[idx].innerText = "❌";
-        if (checkTTTLocalWin("❌")) return triggerGameEnd(true, "You defeated AI!");
         
-        // Smart AI Move
+        if (checkTTTLocalWin("❌")) return triggerGameEnd(true, "You defeated Smart AI!");
+        if (checkTTTFull()) return triggerGameEnd("tie", "Match Tied!");
+
+        document.getElementById('ttt-status').innerText = "AI is thinking... 🤔";
+        
+        const diff = document.getElementById('difficultySelect').value;
+        const delay = diff === 'easy' ? 1000 : diff === 'medium' ? 600 : 300;
+
         setTimeout(() => {
+            if(!isGameRunning) return;
             let emptyIdxs = [];
             cells.forEach((c, i) => { if(c.innerText === "") emptyIdxs.push(i); });
-            if(emptyIdxs.length === 0) return triggerGameEnd("tie", "Match Tied!");
+            if(emptyIdxs.length === 0) return;
             
-            let aiPick = emptyIdxs[Math.floor(Math.random() * emptyIdxs.length)];
+            let aiPick;
+            if (diff === 'hard') {
+                aiPick = findWinningMove(cells, "⭕") ?? findWinningMove(cells, "❌") ?? emptyIdxs[0];
+            } else {
+                aiPick = emptyIdxs[Math.floor(Math.random() * emptyIdxs.length)];
+            }
+
             cells[aiPick].innerText = "⭕";
-            if (checkTTTLocalWin("⭕")) triggerGameEnd(false, "Smart AI Won!");
-        }, 500);
+            if (checkTTTLocalWin("⭕")) triggerGameEnd(false, "AI Outsmarted You!");
+            else if (checkTTTFull()) triggerGameEnd("tie", "Match Tied!");
+            else document.getElementById('ttt-status').innerText = "Your Turn! ⚡";
+        }, delay);
+
     } else {
         roomRef.child('ttt').once('value', snapshot => {
             const data = snapshot.val() || {};
@@ -252,6 +275,17 @@ function playTTT(idx) {
             roomRef.child('ttt').update({ board: b, turn: pKeys[0] === playerId ? pKeys[1] : pKeys[0] });
         });
     }
+}
+
+function findWinningMove(cells, symbol) {
+    const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    for (let w of wins) {
+        let vals = w.map(i => cells[i].innerText);
+        if (vals.filter(v => v === symbol).length === 2 && vals.includes("")) {
+            return w[vals.indexOf("")];
+        }
+    }
+    return null;
 }
 
 function renderTTTBoard(b) {
@@ -276,6 +310,10 @@ function checkTTTLocalWin(m) {
     const b = Array.from(document.querySelectorAll('#game-ttt .cell')).map(c => c.innerText);
     const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
     return wins.some(p => b[p[0]] === m && b[p[1]] === m && b[p[2]] === m);
+}
+
+function checkTTTFull() {
+    return Array.from(document.querySelectorAll('#game-ttt .cell')).every(c => c.innerText !== "");
 }
 
 // ==================== [2] ROCK PAPER SCISSORS ====================
@@ -306,7 +344,7 @@ function checkRPSResult() {
     }
 }
 
-// ==================== [3] DYNAMIC SPEED RACE ENGINES ====================
+// ==================== [3] RACING ENGINES (BALLOON, HEARTS, COINS) ====================
 function startRaceEngine(type) {
     const diff = document.getElementById('difficultySelect').value;
     const zone = document.getElementById('race-zone');
@@ -318,16 +356,18 @@ function startRaceEngine(type) {
     
     let timeRem = 30;
     document.getElementById('race-timer').innerText = `Time: ${timeRem}s`;
+    document.getElementById('my-race-score').innerText = "You: 0";
+    document.getElementById('partner-race-score').innerText = isSinglePlayer ? "AI: 0" : "Opponent: 0";
 
     countdownTimer = setInterval(() => {
         timeRem--;
         document.getElementById('race-timer').innerText = `Time: ${timeRem}s`;
         if (timeRem <= 0) {
-            clearInterval(countdownTimer);
-            triggerGameEnd(myScore > opponentScore ? true : myScore < opponentScore ? false : "tie", `Final Score: You (${myScore}) - Opponent (${opponentScore})`);
+            triggerGameEnd(myScore > opponentScore ? true : myScore < opponentScore ? false : "tie", `Score: You (${myScore}) - Enemy (${opponentScore})`);
         }
     }, 1000);
 
+    // Main Spawner Loop
     raceInterval = setInterval(() => {
         if (!isGameRunning) return;
         
@@ -359,13 +399,25 @@ function startRaceEngine(type) {
         });
 
         zone.appendChild(item);
-
-        // Simulate AI opponent in Single Player
-        if (isSinglePlayer && Math.random() > (diff === 'easy' ? 0.6 : 0.3)) {
-            opponentScore++;
-            document.getElementById('partner-race-score').innerText = `AI: ${opponentScore}`;
-        }
     }, spawnRate);
+
+    // Active AI Engine Simulator for Single Player
+    if (isSinglePlayer) {
+        const aiHitChance = diff === 'easy' ? 0.35 : diff === 'medium' ? 0.6 : 0.85;
+        const aiSpeedRate = diff === 'easy' ? 1000 : diff === 'medium' ? 600 : 350;
+
+        aiTimer = setInterval(() => {
+            if (!isGameRunning) return;
+            const targets = zone.querySelectorAll('.spawn-item');
+            if (targets.length > 0 && Math.random() < aiHitChance) {
+                const target = targets[Math.floor(Math.random() * targets.length)];
+                if (target.flyRef) clearInterval(target.flyRef);
+                target.remove();
+                opponentScore++;
+                document.getElementById('partner-race-score').innerText = `AI: ${opponentScore}`;
+            }
+        }, aiSpeedRate);
+    }
 }
 
 function updateRaceScoreboard() {
